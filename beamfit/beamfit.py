@@ -11,6 +11,7 @@
 import numpy as np
 import scipy.optimize as opt
 import scipy.integrate as integrate
+import scipy.ndimage as ndimage
 
 ################################################################################
 # Functions
@@ -259,14 +260,14 @@ def fit_gaussian_linear_least_squares(image, sigma_threshold=0.5, plot=False):
     if(not np.ma.isMaskedArray(image)):
         image = np.ma.array(image)
 
-    # Force the images to be non-zero 
+    # Force the images to be non-zero
     non_zero_image = image - image.min() + np.exp(-10)
 
     # Get the y values and determine the mask we will use
     image_unwrapped = non_zero_image.ravel()
 
     # Get a median filtered image for thresholding
-    image_filtered = scipy.ndimage.median_filter(image, size=10)
+    image_filtered = ndimage.median_filter(image, size=10)
 
     # Create a mask based on a threshold and a the actual mask
     mask_from_image = (image_unwrapped.mask == False)
@@ -364,14 +365,14 @@ def fit_supergaussian(image, sigma_integrate = 6, sigma_threshold = 4,
         image = np.ma.array(image)
 
     # Make a good initial guess
-    guess = fit_gaussian_linear_least_squares(scipy.ndimage.median_filter(image, size=10),
+    guess = fit_gaussian_linear_least_squares(ndimage.median_filter(image, size=10),
                         sigma_threshold=sigma_threshold_guess)[0]
 
     # Get the Y data
     image_unwrapped = image.ravel()
 
     # Get a median filtered image for thresholding
-    image_filtered = scipy.ndimage.median_filter(image, size=10)
+    image_filtered = ndimage.median_filter(image, size=10)
 
     # Create a mask based on a threshold and a the actual mask
     mask_from_image = (image_unwrapped.mask == False)
