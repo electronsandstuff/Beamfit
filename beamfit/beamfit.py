@@ -282,7 +282,7 @@ def fit_gaussian_linear_least_squares(image, sigma_threshold=0.5, plot=False):
     image_unwrapped = non_zero_image.ravel()
 
     # Get a median filtered image for thresholding
-    image_filtered = ndimage.median_filter(image, size=10)
+    image_filtered = image # ndimage.median_filter(image, size=10)
 
     # Create a mask based on a threshold and a the actual mask
     mask_from_image = (image_unwrapped.mask == False)
@@ -378,15 +378,15 @@ def fit_supergaussian(image, sigma_threshold = 4, sigma_threshold_guess = 1, plo
     if(not np.ma.isMaskedArray(image)):
         image = np.ma.array(image)
 
+    # Get a median filtered image for thresholding
+    image_filtered = ndimage.median_filter(image, size=10)
+
     # Make a good initial guess
-    guess = fit_gaussian_linear_least_squares(ndimage.median_filter(image, size=10),
+    guess = fit_gaussian_linear_least_squares(image_filtered,
                         sigma_threshold=sigma_threshold_guess)[0]
 
     # Get the Y data
     image_unwrapped = image.ravel()
-
-    # Get a median filtered image for thresholding
-    image_filtered = ndimage.median_filter(image, size=10)
 
     # Create a mask based on a threshold and a the actual mask
     mask_from_image = (image_unwrapped.mask == False)
