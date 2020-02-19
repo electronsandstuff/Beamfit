@@ -1,9 +1,22 @@
 #!/usr/bin/env python
 
-################################################################################
-# File: beamfit.py
-# Author: Christopher M. Pierce (cmp285@cornell.edu)
-################################################################################
+'''
+BeamFit - Robust laser and charged particle beam image analysis
+Copyright (C) 2020 Christopher M. Pierce (contact@chris-pierce.com)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+'''
 
 ################################################################################
 # Imports
@@ -12,6 +25,8 @@ import numpy as np
 import scipy.optimize as opt
 import scipy.integrate as integrate
 import scipy.ndimage as ndimage
+import scipy.special as special
+import matplotlib.pyplot as plt
 
 ################################################################################
 # Functions
@@ -347,8 +362,7 @@ def fit_gaussian_linear_least_squares(image, sigma_threshold=0.5, plot=False):
     # Return the fit
     return np.array([A, alpha, root_beta, root_epsilon, mu[0], mu[1], 1, 0.0]), residual
 
-def fit_supergaussian(image, sigma_integrate = 6, sigma_threshold = 4,
-        sigma_threshold_guess = 1, plot=False):
+def fit_supergaussian(image, sigma_threshold = 4, sigma_threshold_guess = 1, plot=False):
     '''This method fits a supergaussian to the provided image and returns the
     first and second moments.  sigma_integrate refers to how much of the tails
     are used in numerically computing the second moments from the function
@@ -402,24 +416,13 @@ def fit_supergaussian(image, sigma_integrate = 6, sigma_threshold = 4,
     f = lambda yy, xx: get_super_gaussian(xx, yy, *x_for_size)
 
     # Get the widths of integration
-    x_width = popt[2]*popt[3]
-    y_width = np.sqrt(1+popt[1]**2)/popt[2]*popt[3]
-    xmin = -1*x_width*sigma_integrate
-    xmax = x_width*sigma_integrate
-    ymin = -1*y_width*sigma_integrate
-    ymax = y_width*sigma_integrate
-
-    # Integrate to find the covariance matrix
-    norm = integrate.dblquad(f, xmin, xmax, lambda x: ymin, lambda x: ymax)[0]
-    mom_xx, mom_xx_err = integrate.dblquad(lambda y, x: f(y,x)*x*x, xmin, xmax,
-            lambda x: ymin, lambda x: ymax)
-    mom_xy, mom_xy_err = integrate.dblquad(lambda y, x: f(y,x)*x*y, xmin, xmax,
-            lambda x: ymin, lambda x: ymax)
-    mom_yy, mom_yy_err = integrate.dblquad(lambda y, x: f(y,x)*y*y, xmin, xmax,
-            lambda x: ymin, lambda x: ymax)
+    A = (popt[2]*popt[3])**2
+    B = -popt[1]*popt[3]**2
+    C = (1+popt[1]**2)/popt[2]**2*popt[3]**2
 
     # Construct the sigma matrix from it
-    sigma = np.array([[mom_xx, mom_xy], [mom_xy, mom_yy]])/norm
+    scaling_factor = np.power(2, 3/popt[6] - 2)*special.gamma(1/popt[6] + 0.5)/np.sqrt(np.pi)
+    sigma = np.array([[A, B], [B, C]])*scaling_factor
 
     # Get the Gaussian
     gaussian = get_super_gaussian(M, N, *popt)
