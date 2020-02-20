@@ -45,9 +45,9 @@ static void double_supergaussian(char **args, npy_intp *dimensions, npy_intp* st
         TMP_171 = *args_copy[1] - *args_copy[3];
         TMP_179 = *args_copy[0] - *args_copy[2];
         *args_copy[10]  = *args_copy[8];
-        *args_copy[10] /= exp(pow(TMP_171*(*args_copy[4]*TMP_171*TMP_177\
+        *args_copy[10] /= exp(pow(fabs(TMP_171*(*args_copy[4]*TMP_171*TMP_177\
           -*args_copy[5]*TMP_177*TMP_179) + TMP_179*(-(*args_copy[5]*TMP_171\
-            *TMP_177)+*args_copy[6]*TMP_177*TMP_179), *args_copy[7])/\
+            *TMP_177)+*args_copy[6]*TMP_177*TMP_179)), *args_copy[7])/\
             pow(2.0, *args_copy[7]));
         *args_copy[10] += *args_copy[9];
 
@@ -78,20 +78,20 @@ static void double_supergaussian_grad(char **args, npy_intp *dimensions, npy_int
       TMP_185 = *args_copy[4]**args_copy[1]**args_copy[1];
       TMP_189 = *args_copy[2]**args_copy[5] -(*args_copy[5]**args_copy[0]) + *args_copy[4]**args_copy[1];
       TMP_191 = TMP_178 + *args_copy[6]*TMP_180*TMP_180 + 2.0**args_copy[5]**args_copy[1]*TMP_180 + TMP_185 -2.0**args_copy[3]*TMP_189;
-      TMP_170 = pow(2.,1-*args_copy[7]);
-      TMP_171 = pow(2.,-*args_copy[7]);
-      TMP_175 = TMP_172 -(*args_copy[4]**args_copy[6]);
-      TMP_192 = -(TMP_191/TMP_175);
-      TMP_193 = pow(TMP_192,*args_copy[7]);
+      TMP_170 = pow(2.0, 1.0-*args_copy[7]);
+      TMP_171 = pow(2.0, -*args_copy[7]);
+      TMP_175 = (*args_copy[4]**args_copy[6]) - TMP_172;
+      TMP_192 = TMP_191/TMP_175;
+      TMP_193 = pow(fabs(TMP_192),*args_copy[7]);
       TMP_195 = exp(-(TMP_171*TMP_193));
-      TMP_199 = pow(*args_copy[4]**args_copy[6]-TMP_172,-*args_copy[7]);
-      TMP_205 = -1 + *args_copy[7];
-      TMP_206 = pow(TMP_191,TMP_205);
+      TMP_199 = pow(fabs(*args_copy[4]**args_copy[6]-TMP_172),-*args_copy[7]);
+      TMP_205 = -1.0 + *args_copy[7];
+      TMP_206 = pow(fabs(TMP_191) + 1.0e-100, TMP_205);
       TMP_200 = *args_copy[3]**args_copy[5];
       TMP_202 = *args_copy[6]**args_copy[0];
       TMP_204 = TMP_200 -(*args_copy[2]**args_copy[6]) + TMP_202 -(*args_copy[5]**args_copy[1]);
       TMP_214 = 1/TMP_175/TMP_175;
-      TMP_216 = pow(TMP_192,TMP_205);
+      TMP_216 = pow(fabs(TMP_192) + 1.0e-100,TMP_205);
       TMP_212 = *args_copy[3]**args_copy[4] -(*args_copy[2]**args_copy[5]) + *args_copy[5]**args_copy[0] -(*args_copy[4]**args_copy[1]);
 
       *args_copy[10] = *args_copy[8]**args_copy[7]*TMP_170*TMP_195*TMP_199*TMP_204*TMP_206;
@@ -99,11 +99,11 @@ static void double_supergaussian_grad(char **args, npy_intp *dimensions, npy_int
       *args_copy[12] = *args_copy[8]* *args_copy[7]*TMP_171*TMP_195*TMP_204*TMP_204*TMP_214*TMP_216;
       *args_copy[13] = *args_copy[8]**args_copy[7]*TMP_170*(-(*args_copy[3]**args_copy[4]) + TMP_189)*TMP_195*TMP_204*TMP_214*TMP_216;
       *args_copy[14] = *args_copy[8]**args_copy[7]*TMP_171*TMP_195*TMP_212*TMP_212*TMP_214*TMP_216;
-      if(TMP_191 < 1e-100){
+      if(TMP_191 < 1e-50){
         *args_copy[15] = 0.0;
       }
       else{
-        *args_copy[15] = *args_copy[8]*TMP_171*TMP_193*TMP_195*(log(2.0**args_copy[4]**args_copy[6] - 2.*TMP_172) - log(TMP_191));
+        *args_copy[15] = *args_copy[8]*TMP_171*TMP_193*TMP_195*(log(fabs(2.0**args_copy[4]**args_copy[6] - 2.*TMP_172)) - log(fabs(TMP_191)));
       }
       *args_copy[16] = TMP_195;
       *args_copy[17] = 1;

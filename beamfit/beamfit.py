@@ -27,6 +27,8 @@ import scipy.integrate as integrate
 import scipy.ndimage as ndimage
 import scipy.special as special
 import matplotlib.pyplot as plt
+from . import gaussufunc
+from .gaussufunc import *
 
 ################################################################################
 # Functions
@@ -379,7 +381,7 @@ def fit_supergaussian(image, sigma_threshold = 4, sigma_threshold_guess = 1, plo
         image = np.ma.array(image)
 
     # Get a median filtered image for thresholding
-    image_filtered = ndimage.median_filter(image, size=10)
+    image_filtered = ndimage.median_filter(image, size=3)
 
     # Make a good initial guess
     guess = fit_gaussian_linear_least_squares(image_filtered,
@@ -403,36 +405,33 @@ def fit_supergaussian(image, sigma_threshold = 4, sigma_threshold_guess = 1, plo
     # Mask it
     x = MN[:, mask_combined]
 
+    # Convert to the new guess
+    real_guess = np.array([
+        guess[4],
+        guess[5],
+        guess[2]**2*guess[3]**2,
+        -guess[1]*guess[3]**2,
+        (1+guess[1]**2)/guess[2]**2*guess[3]**2,
+        guess[6],
+        guess[0],
+        guess[7]
+    ])
+
     # Perform the fit
-    fit_func = lambda xdata, A, alpha, root_beta, root_epsilon, mux, muy, n, offset: get_super_gaussian(xdata[0], xdata[1], A, alpha, root_beta, root_epsilon, mux, muy, n, offset)
-    fit_func_jac = lambda xdata, A, alpha, root_beta, root_epsilon, mux, muy, n, offset: get_super_gaussian_grad(xdata[0], xdata[1], A, alpha, root_beta, root_epsilon, mux, muy, n, offset).T
-    popt, pcov = opt.curve_fit(fit_func, x, y, p0=guess, jac=fit_func_jac, ftol=1e-9)
-
-    # Use that to determine beam size
-    x_for_size = np.copy(popt)
-    x_for_size[4] = 0.0
-    x_for_size[5] = 0.0
-    x_for_size[7] = 0.0
-    f = lambda yy, xx: get_super_gaussian(xx, yy, *x_for_size)
-
-    # Get the widths of integration
-    A = (popt[2]*popt[3])**2
-    B = -popt[1]*popt[3]**2
-    C = (1+popt[1]**2)/popt[2]**2*popt[3]**2
+    fit_func = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: supergaussian(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)
+    fit_func_jac = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: np.array(supergaussian_grad(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)).T
+    popt, pcov = opt.curve_fit(fit_func, x, y, p0=real_guess, jac=fit_func_jac, ftol=1e-9, method='lm')
 
     # Construct the sigma matrix from it
-    scaling_factor = np.power(2, 3/popt[6] - 2)*special.gamma(1/popt[6] + 0.5)/np.sqrt(np.pi)
-    sigma = np.array([[A, B], [B, C]])*scaling_factor
-
-    # Get the Gaussian
-    gaussian = get_super_gaussian(M, N, *popt)
-
-    # Make the residual
-    M, N = np.mgrid[:image.shape[0], :image.shape[1]]
-    residual = (get_super_gaussian(M, N, *popt) - image)
+    scaling_factor = np.power(2, 3/popt[5] - 2)*special.gamma(1/popt[5] + 0.5)/np.sqrt(np.pi)
+    sigma = np.array([[popt[2], popt[3]], [popt[3], popt[4]]])*scaling_factor
 
     # Find mu
-    mu = popt[4:6]
+    mu = popt[0:2]
+
+    # Get the gaussian and residual
+    gaussian = supergaussian(M,N,*popt)
+    residual = image - gaussian
 
     # If we are plotting it
     if(plot):
