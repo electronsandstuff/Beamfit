@@ -19,6 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 import setuptools
+import numpy as np
+
+# Add in my c-extension
+ext_modules = [setuptools.Extension('beamfit.gaussufunc', sources = ['src/gaussian.c'],
+    include_dirs = [np.get_include()]) ]
 
 setuptools.setup(
         name='beamfit',
@@ -33,6 +38,7 @@ setuptools.setup(
           'matplotlib',
           'scipy'
         ],
+        ext_modules = ext_modules,
         license = 'GNU Affero General Public License v3 or later (AGPLv3+)',
         classifiers = [
           "Programming Language :: Python :: 3",

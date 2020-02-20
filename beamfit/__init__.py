@@ -7,4 +7,6 @@
 
 # Import everything from the module
 from . import beamfit
+from . import gaussufunc
 from .beamfit import *
+from .gaussufunc import *
