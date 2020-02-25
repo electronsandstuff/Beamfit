@@ -31,241 +31,8 @@ from . import gaussufunc
 from .gaussufunc import *
 
 ################################################################################
-# Functions
+# Functions for fitting
 ################################################################################
-def get_super_gaussian(x, y, A, alpha, root_beta, root_epsilon, mux, muy, n, offset):
-    '''Returns the value of a supergaussian function evaluated at the position
-    (x, y).  The remaining parameters determine the shape of the function.
-    Alpha, root_beta and root_epsilon refer to the Twiss parameterization of
-    the ellipse.  mux and muy are the mean of the distribution in x and y.  n
-    is the supergaussian parameter and offset is a constant added to the
-    function to represent a noise floor.'''
-    beta = root_beta**2
-    epsilon = root_epsilon**2
-    return A*np.exp(-1/2*(2*mux*muy*alpha/epsilon - 2*muy*x*alpha/epsilon -
-        2*mux*y*alpha/epsilon + 2*x*y*alpha/epsilon + mux**2/beta/epsilon -
-        2*mux*x/beta/epsilon + x**2/beta/epsilon + mux**2*alpha**2/beta/epsilon
-        - 2*mux*x*alpha**2/beta/epsilon + x**2*alpha**2/beta/epsilon +
-        muy**2*beta/epsilon - 2*muy*y*beta/epsilon + y**2*beta/epsilon)**n) + offset
-
-def get_super_gaussian_grad(X, Y, A, Alpha, RootBeta, RootEpsilon, MuX, MuY, N, Offset):
-    '''Returns the gradient of the above supergaussian function WRT the
-    parameters.  Warning: dragons be here!'''
-    return np.array([
-        np.exp(-((2*Alpha*MuX*MuY)/RootEpsilon**2 +
-            MuX**2/(RootBeta**2*RootEpsilon**2) +
-            (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-            (MuY**2*RootBeta**2)/RootEpsilon**2 -
-            (2*Alpha*MuY*X)/RootEpsilon**2 -
-            (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-            (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-            X**2/(RootBeta**2*RootEpsilon**2) +
-            (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-            (2*Alpha*MuX*Y)/RootEpsilon**2 -
-            (2*MuY*RootBeta**2*Y)/RootEpsilon**2 + (2*Alpha*X*Y)/RootEpsilon**2
-            + (RootBeta**2*Y**2)/RootEpsilon**2)**N/2.),
-        -(A*N*((2*MuX*MuY)/RootEpsilon**2 +
-            (2*Alpha*MuX**2)/(RootBeta**2*RootEpsilon**2) -
-            (2*MuY*X)/RootEpsilon**2 -
-            (4*Alpha*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-            (2*Alpha*X**2)/(RootBeta**2*RootEpsilon**2) -
-            (2*MuX*Y)/RootEpsilon**2 +
-            (2*X*Y)/RootEpsilon**2)*((2*Alpha*MuX*MuY)/RootEpsilon**2 +
-                MuX**2/(RootBeta**2*RootEpsilon**2) +
-                (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-                (MuY**2*RootBeta**2)/RootEpsilon**2 -
-                (2*Alpha*MuY*X)/RootEpsilon**2 -
-                (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-                (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-                X**2/(RootBeta**2*RootEpsilon**2) +
-                (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-                (2*Alpha*MuX*Y)/RootEpsilon**2 -
-                (2*MuY*RootBeta**2*Y)/RootEpsilon**2 +
-                (2*Alpha*X*Y)/RootEpsilon**2 +
-                (RootBeta**2*Y**2)/RootEpsilon**2)**(-1 +
-                    N)*np.exp(-((2*Alpha*MuX*MuY)/RootEpsilon**2 +
-                        MuX**2/(RootBeta**2*RootEpsilon**2) +
-                        (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-                        (MuY**2*RootBeta**2)/RootEpsilon**2 -
-                        (2*Alpha*MuY*X)/RootEpsilon**2 -
-                        (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-                        (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-                        X**2/(RootBeta**2*RootEpsilon**2) +
-                        (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-                        (2*Alpha*MuX*Y)/RootEpsilon**2 -
-                        (2*MuY*RootBeta**2*Y)/RootEpsilon**2 +
-                        (2*Alpha*X*Y)/RootEpsilon**2 +
-                        (RootBeta**2*Y**2)/RootEpsilon**2)**N/2.))/2.,
-        -(A*N*((-2*MuX**2)/(RootBeta**3*RootEpsilon**2) -
-            (2*Alpha**2*MuX**2)/(RootBeta**3*RootEpsilon**2) +
-            (2*MuY**2*RootBeta)/RootEpsilon**2 +
-            (4*MuX*X)/(RootBeta**3*RootEpsilon**2) +
-            (4*Alpha**2*MuX*X)/(RootBeta**3*RootEpsilon**2) -
-            (2*X**2)/(RootBeta**3*RootEpsilon**2) -
-            (2*Alpha**2*X**2)/(RootBeta**3*RootEpsilon**2) -
-            (4*MuY*RootBeta*Y)/RootEpsilon**2 +
-            (2*RootBeta*Y**2)/RootEpsilon**2)*((2*Alpha*MuX*MuY)/RootEpsilon**2
-                + MuX**2/(RootBeta**2*RootEpsilon**2) +
-                (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-                (MuY**2*RootBeta**2)/RootEpsilon**2 -
-                (2*Alpha*MuY*X)/RootEpsilon**2 -
-                (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-                (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-                X**2/(RootBeta**2*RootEpsilon**2) +
-                (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-                (2*Alpha*MuX*Y)/RootEpsilon**2 -
-                (2*MuY*RootBeta**2*Y)/RootEpsilon**2 +
-                (2*Alpha*X*Y)/RootEpsilon**2 +
-                (RootBeta**2*Y**2)/RootEpsilon**2)**(-1 +
-                    N)*np.exp(-((2*Alpha*MuX*MuY)/RootEpsilon**2 +
-                        MuX**2/(RootBeta**2*RootEpsilon**2) +
-                        (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-                        (MuY**2*RootBeta**2)/RootEpsilon**2 -
-                        (2*Alpha*MuY*X)/RootEpsilon**2 -
-                        (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-                        (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-                        X**2/(RootBeta**2*RootEpsilon**2) +
-                        (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-                        (2*Alpha*MuX*Y)/RootEpsilon**2 -
-                        (2*MuY*RootBeta**2*Y)/RootEpsilon**2 +
-                        (2*Alpha*X*Y)/RootEpsilon**2 +
-                        (RootBeta**2*Y**2)/RootEpsilon**2)**N/2.))/2.,
-        -(A*N*((-4*Alpha*MuX*MuY)/RootEpsilon**3 -
-            (2*MuX**2)/(RootBeta**2*RootEpsilon**3) -
-            (2*Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**3) -
-            (2*MuY**2*RootBeta**2)/RootEpsilon**3 +
-            (4*Alpha*MuY*X)/RootEpsilon**3 +
-            (4*MuX*X)/(RootBeta**2*RootEpsilon**3) +
-            (4*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**3) -
-            (2*X**2)/(RootBeta**2*RootEpsilon**3) -
-            (2*Alpha**2*X**2)/(RootBeta**2*RootEpsilon**3) +
-            (4*Alpha*MuX*Y)/RootEpsilon**3 +
-            (4*MuY*RootBeta**2*Y)/RootEpsilon**3 - (4*Alpha*X*Y)/RootEpsilon**3
-            -
-            (2*RootBeta**2*Y**2)/RootEpsilon**3)*((2*Alpha*MuX*MuY)/RootEpsilon**2
-                + MuX**2/(RootBeta**2*RootEpsilon**2) +
-                (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-                (MuY**2*RootBeta**2)/RootEpsilon**2 -
-                (2*Alpha*MuY*X)/RootEpsilon**2 -
-                (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-                (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-                X**2/(RootBeta**2*RootEpsilon**2) +
-                (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-                (2*Alpha*MuX*Y)/RootEpsilon**2 -
-                (2*MuY*RootBeta**2*Y)/RootEpsilon**2 +
-                (2*Alpha*X*Y)/RootEpsilon**2 +
-                (RootBeta**2*Y**2)/RootEpsilon**2)**(-1 +
-                    N)*np.exp(-((2*Alpha*MuX*MuY)/RootEpsilon**2 +
-                        MuX**2/(RootBeta**2*RootEpsilon**2) +
-                        (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-                        (MuY**2*RootBeta**2)/RootEpsilon**2 -
-                        (2*Alpha*MuY*X)/RootEpsilon**2 -
-                        (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-                        (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-                        X**2/(RootBeta**2*RootEpsilon**2) +
-                        (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-                        (2*Alpha*MuX*Y)/RootEpsilon**2 -
-                        (2*MuY*RootBeta**2*Y)/RootEpsilon**2 +
-                        (2*Alpha*X*Y)/RootEpsilon**2 +
-                        (RootBeta**2*Y**2)/RootEpsilon**2)**N/2.))/2.,
-        -(A*N*((2*Alpha*MuY)/RootEpsilon**2 +
-            (2*MuX)/(RootBeta**2*RootEpsilon**2) +
-            (2*Alpha**2*MuX)/(RootBeta**2*RootEpsilon**2) -
-            (2*X)/(RootBeta**2*RootEpsilon**2) -
-            (2*Alpha**2*X)/(RootBeta**2*RootEpsilon**2) -
-            (2*Alpha*Y)/RootEpsilon**2)*((2*Alpha*MuX*MuY)/RootEpsilon**2 +
-                MuX**2/(RootBeta**2*RootEpsilon**2) +
-                (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-                (MuY**2*RootBeta**2)/RootEpsilon**2 -
-                (2*Alpha*MuY*X)/RootEpsilon**2 -
-                (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-                (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-                X**2/(RootBeta**2*RootEpsilon**2) +
-                (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-                (2*Alpha*MuX*Y)/RootEpsilon**2 -
-                (2*MuY*RootBeta**2*Y)/RootEpsilon**2 +
-                (2*Alpha*X*Y)/RootEpsilon**2 +
-                (RootBeta**2*Y**2)/RootEpsilon**2)**(-1 +
-                    N)*np.exp(-((2*Alpha*MuX*MuY)/RootEpsilon**2 +
-                        MuX**2/(RootBeta**2*RootEpsilon**2) +
-                        (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-                        (MuY**2*RootBeta**2)/RootEpsilon**2 -
-                        (2*Alpha*MuY*X)/RootEpsilon**2 -
-                        (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-                        (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-                        X**2/(RootBeta**2*RootEpsilon**2) +
-                        (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-                        (2*Alpha*MuX*Y)/RootEpsilon**2 -
-                        (2*MuY*RootBeta**2*Y)/RootEpsilon**2 +
-                        (2*Alpha*X*Y)/RootEpsilon**2 +
-                        (RootBeta**2*Y**2)/RootEpsilon**2)**N/2.))/2.,
-        -(A*N*((2*Alpha*MuX)/RootEpsilon**2 +
-            (2*MuY*RootBeta**2)/RootEpsilon**2 - (2*Alpha*X)/RootEpsilon**2 -
-            (2*RootBeta**2*Y)/RootEpsilon**2)*((2*Alpha*MuX*MuY)/RootEpsilon**2
-                + MuX**2/(RootBeta**2*RootEpsilon**2) +
-                (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-                (MuY**2*RootBeta**2)/RootEpsilon**2 -
-                (2*Alpha*MuY*X)/RootEpsilon**2 -
-                (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-                (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-                X**2/(RootBeta**2*RootEpsilon**2) +
-                (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-                (2*Alpha*MuX*Y)/RootEpsilon**2 -
-                (2*MuY*RootBeta**2*Y)/RootEpsilon**2 +
-                (2*Alpha*X*Y)/RootEpsilon**2 +
-                (RootBeta**2*Y**2)/RootEpsilon**2)**(-1 +
-                    N)*np.exp(-((2*Alpha*MuX*MuY)/RootEpsilon**2 +
-                        MuX**2/(RootBeta**2*RootEpsilon**2) +
-                        (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-                        (MuY**2*RootBeta**2)/RootEpsilon**2 -
-                        (2*Alpha*MuY*X)/RootEpsilon**2 -
-                        (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-                        (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-                        X**2/(RootBeta**2*RootEpsilon**2) +
-                        (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-                        (2*Alpha*MuX*Y)/RootEpsilon**2 -
-                        (2*MuY*RootBeta**2*Y)/RootEpsilon**2 +
-                        (2*Alpha*X*Y)/RootEpsilon**2 +
-                        (RootBeta**2*Y**2)/RootEpsilon**2)**N/2.))/2.,
-        -(A*((2*Alpha*MuX*MuY)/RootEpsilon**2 +
-            MuX**2/(RootBeta**2*RootEpsilon**2) +
-            (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-            (MuY**2*RootBeta**2)/RootEpsilon**2 -
-            (2*Alpha*MuY*X)/RootEpsilon**2 -
-            (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-            (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-            X**2/(RootBeta**2*RootEpsilon**2) +
-            (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-            (2*Alpha*MuX*Y)/RootEpsilon**2 -
-            (2*MuY*RootBeta**2*Y)/RootEpsilon**2 + (2*Alpha*X*Y)/RootEpsilon**2
-            +
-            (RootBeta**2*Y**2)/RootEpsilon**2)**N*np.exp(-((2*Alpha*MuX*MuY)/RootEpsilon**2
-                + MuX**2/(RootBeta**2*RootEpsilon**2) +
-                (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-                (MuY**2*RootBeta**2)/RootEpsilon**2 -
-                (2*Alpha*MuY*X)/RootEpsilon**2 -
-                (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-                (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-                X**2/(RootBeta**2*RootEpsilon**2) +
-                (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-                (2*Alpha*MuX*Y)/RootEpsilon**2 -
-                (2*MuY*RootBeta**2*Y)/RootEpsilon**2 +
-                (2*Alpha*X*Y)/RootEpsilon**2 +
-                (RootBeta**2*Y**2)/RootEpsilon**2)**N/2.)*np.log((2*Alpha*MuX*MuY)/RootEpsilon**2
-                    + MuX**2/(RootBeta**2*RootEpsilon**2) +
-                    (Alpha**2*MuX**2)/(RootBeta**2*RootEpsilon**2) +
-                    (MuY**2*RootBeta**2)/RootEpsilon**2 -
-                    (2*Alpha*MuY*X)/RootEpsilon**2 -
-                    (2*MuX*X)/(RootBeta**2*RootEpsilon**2) -
-                    (2*Alpha**2*MuX*X)/(RootBeta**2*RootEpsilon**2) +
-                    X**2/(RootBeta**2*RootEpsilon**2) +
-                    (Alpha**2*X**2)/(RootBeta**2*RootEpsilon**2) -
-                    (2*Alpha*MuX*Y)/RootEpsilon**2 -
-                    (2*MuY*RootBeta**2*Y)/RootEpsilon**2 +
-                    (2*Alpha*X*Y)/RootEpsilon**2 +
-                    (RootBeta**2*Y**2)/RootEpsilon**2))/2.,
-        np.ones_like(X)])
-
 def fit_gaussian_linear_least_squares(image, sigma_threshold=0.5, plot=False):
     '''Fits an image to a normal gaussian using linear least squares.  This
     method is intended to be used as a stable starting point to find a guess
@@ -364,49 +131,83 @@ def fit_gaussian_linear_least_squares(image, sigma_threshold=0.5, plot=False):
     # Return the fit
     return np.array([A, alpha, root_beta, root_epsilon, mu[0], mu[1], 1, 0.0]), residual
 
-def fit_supergaussian(image, sigma_threshold = 4, sigma_threshold_guess = 1, plot=False):
-    '''This method fits a supergaussian to the provided image and returns the
-    first and second moments.  sigma_integrate refers to how much of the tails
-    are used in numerically computing the second moments from the function
-    after the fit has already been performed.  This is done through numerical
-    integration.  sigma_threshold determines how much of the image is used in
-    the nonlinear fitting routing based on amplitude.  sigma_threshold guess is
-    the same threshold, but used for the linear least squares routine which
-    provided a guess at the non-linear fitting parameters.'''
+def chunkIt(seq, num):
+    avg = len(seq) / float(num)
+    out = []
+    last = 0.0
+
+    while last < len(seq):
+        out.append(seq[int(last):int(last + avg)])
+        last += avg
+
+    return out
+
+# Wrapper functions
+fit_func = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: supergaussian(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)
+fit_func_jac = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: np.array(supergaussian_grad(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)).T
+
+def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, batches=10, epochs=1):
+    # Get the intial value of h
+    h = np.copy(h0)
+
+    for _ in range(epochs):
+        # Get a batch
+        idx = np.arange(x.shape[1])
+        np.random.shuffle(idx)
+        batches = chunkIt(idx, 15)
+
+        # Minimize once for each batch
+        for batch in batches:
+            # Calculate the gradient and value of the function
+            root_weight = np.sqrt(w[batch])
+            model_grad = (fit_func_jac(x[:,batch], *h).T).T
+            model = root_weight*(h[-2]*model_grad[:, -2] + h[-1])
+            model_grad = (model_grad.T*root_weight).T
+
+            # Turn this into the gradient of the loss function and the approximation of the hessian
+            grad = 2*model_grad.T@(root_weight*y[batch] - model).T
+            LHS = model_grad.T @ model_grad
+
+            # Add the LMA damping term
+            diag = np.diag_indices(8)
+            LHS[diag] = LHS[diag]*(1+LMA_lambda)
+
+            # Calculate the update
+            delta = np.linalg.solve(LHS, grad)
+
+            # Update the model
+            h = h + delta
+
+    # Calculate the Hessian of the loss function for error estimation
+    root_weight = np.sqrt(w)
+    model_grad = (fit_func_jac(x, *h).T).T
+    model = h[-2]*model_grad[:, -2] + h[-1]
+    grad = 2*root_weight*model_grad.T@(root_weight*y - root_weight*model).T
+    hess = (root_weight*model_grad.T)@(root_weight*model_grad.T).T
+
+    # Invert to get the variance-covariance matrix
+    C = np.linalg.inv(hess)
+
+    # Return the parameters and the variance covariance matrix
+    return h, C
+
+def fit_supergaussian(image, image_weights, sigma_threshold=4, sigma_threshold_guess=1, batches=15, epochs=1):
     # Calculate the threshold
-    threshold = np.exp(-1*sigma_threshold)
+    threshold = np.exp(-1*sigma_threshold**2/2)
 
     # If there isn't a mask, make one
     if(not np.ma.isMaskedArray(image)):
         image = np.ma.array(image)
 
     # Get a median filtered image for thresholding
-    image_filtered = ndimage.median_filter(image, size=3)
+    image_filtered = ndimage.median_filter(image, size=6)
 
     # Make a good initial guess
     guess = fit_gaussian_linear_least_squares(image_filtered,
                         sigma_threshold=sigma_threshold_guess)[0]
 
-    # Get the Y data
-    image_unwrapped = image.ravel()
-
-    # Create a mask based on a threshold and a the actual mask
-    mask_from_image = (image_unwrapped.mask == False)
-    mask_from_threshold = image_unwrapped > image_filtered.ravel().max()*threshold
-    mask_combined = np.logical_and(mask_from_image, mask_from_threshold)
-
-    # Mask the array
-    y = np.array(image_unwrapped[mask_combined])
-
-    # Get the X data
-    M, N = np.mgrid[:image.shape[0], :image.shape[1]]
-    MN = np.vstack((M.ravel(), N.ravel()))
-
-    # Mask it
-    x = MN[:, mask_combined]
-
     # Convert to the new guess
-    real_guess = np.array([
+    h0 = np.array([
         guess[4],
         guess[5],
         guess[2]**2*guess[3]**2,
@@ -417,42 +218,121 @@ def fit_supergaussian(image, sigma_threshold = 4, sigma_threshold_guess = 1, plo
         guess[7]
     ])
 
-    # Perform the fit
-    fit_func = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: supergaussian(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)
-    fit_func_jac = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: np.array(supergaussian_grad(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)).T
-    popt, pcov = opt.curve_fit(fit_func, x, y, p0=real_guess, jac=fit_func_jac, ftol=1e-9, method='lm')
+    # Get the Y data
+    image_unwrapped = image.ravel()
 
-    # Construct the sigma matrix from it
-    scaling_factor = np.power(2, 3/popt[5] - 2)*special.gamma(1/popt[5] + 0.5)/np.sqrt(np.pi)
-    sigma = np.array([[popt[2], popt[3]], [popt[3], popt[4]]])*scaling_factor
+    # Create a mask based on a threshold and a the actual mask
+    mask_from_image = (image.mask == False)
+    mask_from_threshold = (image_filtered-image_filtered.min())/image_filtered.max()>threshold
+    mask_combined = np.logical_and(mask_from_image, mask_from_threshold).ravel()
 
-    # Find mu
-    mu = popt[0:2]
+    # Mask the array
+    y = np.array(image_unwrapped[mask_combined])
+    w = np.array(image_weights.ravel()[mask_combined])
 
-    # Get the gaussian and residual
-    gaussian = supergaussian(M,N,*popt)
-    residual = image - gaussian
+    # Get the X data
+    M, N = np.mgrid[:image.shape[0], :image.shape[1]]
+    MN = np.vstack((M.ravel(), N.ravel()))
 
-    # If we are plotting it
-    if(plot):
-        # Set the plots to be larger
-        plt.rcParams["figure.figsize"] = 12,3.5
+    # Mask it
+    x = MN[:, mask_combined]
 
-        # Show the fit
-        font = {'family' : 'DejaVu Sans',
-                'weight' : 'normal',
-                'size'   : 12}
-        plt.rc('font', **font)
+    # Fit it
+    h, C = fit_stochastic_LMA(x, y, w, h0, batches=batches, epochs=epochs)
 
-        # Plot the image and the fit and the residual
-        ax1 = plt.subplot(131)
-        ax2 = plt.subplot(132)
-        ax3 = plt.subplot(133)
+    # Return the fit and the covariance variance matrix
+    return h, C
 
-        # Show them
-        ax1.imshow(image)
-        ax2.imshow(gaussian)
-        ax3.imshow(residual)
+################################################################################
+# Post processing
+################################################################################
+def get_mu_sigma(h, pixel_size):
+    # Pull out the parameters
+    mu = np.array([h[0], h[1]])*pixel_size
 
-    # Return everything
-    return mu, sigma, x, gaussian, residual
+    # Get sigma
+    sigma = np.array([[h[2], h[3]], [h[3], h[4]]])
+    n = h[5]
+    scaling_factor = np.power(2, 3/n - 2)*special.gamma(1/n + 0.5)/np.sqrt(np.pi)
+    sigma = sigma*scaling_factor*pixel_size**2
+
+    # Return them
+    return mu, sigma
+
+def get_mu_sigma_std(h, C, pixel_size, pixel_size_std):
+    # Pull out the parameters
+    mu = np.array([h[0], h[1]])
+
+    # Get sigma
+    sigma = np.array([[h[2], h[3]], [h[3], h[4]]])
+    n = h[5]
+    scaling_factor = np.power(2, 3/n - 2)*special.gamma(1/n + 0.5)/np.sqrt(np.pi)
+    sigma = sigma*scaling_factor
+
+    # Calculate mu's variance
+    mu_var = np.array([C[0,0], C[1,1]])
+
+    # Calculate Sigma's variance
+    sigma_var = np.array([[C[2,2], C[3,3]], [C[3,3], C[4,4]]])
+    n = h[5]
+    n_var = C[5,5]
+    scaling_factor_deriv = scaling_factor*(-1*np.log(8) + special.polygamma(0, 1/n + 0.5))/n**2
+    scaling_factor_var = n_var*scaling_factor_deriv**2
+    sigma_var = sigma_var*scaling_factor_var + sigma**2*scaling_factor_var + scaling_factor**2*sigma_var
+
+    # Scale by the pixel size and calculate variances
+    pixel_size_var = pixel_size_std**2
+    mu_scaled_var = mu_var*pixel_size_var + pixel_size_var*mu**2 + mu_var*pixel_size**2
+    pixel_size_squared_var = 4*pixel_size**2*pixel_size_var
+    sigma_scaled_var = sigma_var*pixel_size_squared_var + pixel_size_squared_var*sigma**2 + sigma_var*pixel_size**4
+
+    # Return them
+    return np.sqrt(mu_scaled_var), np.sqrt(sigma_scaled_var)
+
+def pretty_print_loc_and_size(h, C, pixel_size, pixel_size_std):
+    # Pull out the components
+    mu, sigma = get_mu_sigma(h, pixel_size)
+    mu_std, sigma_std = get_mu_sigma_std(h, C, pixel_size, pixel_size_std)
+
+    # Print them
+    np.set_printoptions(precision=3)
+    print('Position:  ', end='')
+    print(mu*1e3, end='')
+    print(' mm +/- ', end='')
+    print(mu_std*1e6, end='')
+    print(' um')
+    print('Spot Size: ', end='')
+    print(np.sqrt(sigma.diagonal())*1e3, end='')
+    print(' mm +/- ', end='')
+    size_std = np.abs(0.5/np.sqrt(sigma.diagonal())) * sigma_std.diagonal()
+    print(size_std*1e6, end='')
+    print(' um')
+
+################################################################################
+# Fit plotting
+################################################################################
+def plot_residuals(image, h):
+    M, N = np.mgrid[:image.shape[0], :image.shape[1]]
+    residual = image - supergaussian(M,N,*h)
+    plt.imshow(residual, cmap='seismic')
+
+def plot_beam_contours(image, h):
+    plt.imshow(image)
+    M, N = np.mgrid[:image.shape[0], :image.shape[1]]
+    gauss = supergaussian(M,N,*h)
+    plt.contour(gauss, colors='r', levels=3)
+
+def plot_threshold(image, sigma_threshold=4):
+    # Calculate the threshold
+    threshold = np.exp(-1*sigma_threshold**2/2)
+
+    # Get a median filtered image for thresholding
+    image_filtered = ndimage.median_filter(image, size=6)
+
+    # Get the mask
+    mask_from_image = (image.mask == False)
+    mask_from_threshold = (image_filtered-image_filtered.min())/image_filtered.max()  > threshold
+    mask_combined = np.logical_and(mask_from_image, mask_from_threshold)
+
+    # Show it
+    plt.imshow(mask_combined)
