@@ -146,23 +146,33 @@ def chunkIt(seq, num):
 fit_func = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: supergaussian(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)
 fit_func_jac = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: np.array(supergaussian_grad(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)).T
 
-def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, batches=10, epochs=1):
-    # Get the intial value of h
-    h = np.copy(h0)
+def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=5, epochs=4):
+    # Convert to out non-negative internal parameters
+    h_internal = np.copy(h0)
+    h_internal[2] = np.sqrt(h_internal[2])
+    h_internal[4] = np.sqrt(h_internal[4])
+    h_internal[5] = np.sqrt(h_internal[5])
 
     for _ in range(epochs):
         # Get a batch
         idx = np.arange(x.shape[1])
         np.random.shuffle(idx)
-        batches = chunkIt(idx, 15)
+        batches = chunkIt(idx, nbatch)
 
         # Minimize once for each batch
         for batch in batches:
-            # Calculate the gradient and value of the function
+            # Convert h for the model
+            h_external = np.copy(h_internal)
+            h_external[2] = h_external[2]**2
+            h_external[4] = h_external[4]**2
+            h_external[5] = h_external[5]**2
+
+            # Calculate the gradient and value of the function, but with non-negative parameters squared
             root_weight = np.sqrt(w[batch])
-            model_grad = (fit_func_jac(x[:,batch], *h).T).T
-            model = root_weight*(h[-2]*model_grad[:, -2] + h[-1])
+            model_grad = (fit_func_jac(x[:,batch], *h_external).T).T
+            model = root_weight*(h_external[-2]*model_grad[:, -2] + h_external[-1])
             model_grad = (model_grad.T*root_weight).T
+            model_grad = model_grad*np.array([1.0, 1.0, 2*h_internal[2], 1.0, 2*h_internal[4], 2*h_internal[5], 1.0, 1.0])
 
             # Turn this into the gradient of the loss function and the approximation of the hessian
             grad = 2*model_grad.T@(root_weight*y[batch] - model).T
@@ -176,12 +186,18 @@ def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, batches=10, epochs=1):
             delta = np.linalg.solve(LHS, grad)
 
             # Update the model
-            h = h + delta
+            h_internal = h_internal + delta
+
+    # Convert h for the model
+    h_external = np.copy(h_internal)
+    h_external[2] = h_external[2]**2
+    h_external[4] = h_external[4]**2
+    h_external[5] = h_external[5]**2
 
     # Calculate the Hessian of the loss function for error estimation
     root_weight = np.sqrt(w)
-    model_grad = (fit_func_jac(x, *h).T).T
-    model = h[-2]*model_grad[:, -2] + h[-1]
+    model_grad = (fit_func_jac(x, *h_external).T).T
+    model = h_external[-2]*model_grad[:, -2] + h_external[-1]
     grad = 2*root_weight*model_grad.T@(root_weight*y - root_weight*model).T
     hess = (root_weight*model_grad.T)@(root_weight*model_grad.T).T
 
@@ -189,9 +205,11 @@ def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, batches=10, epochs=1):
     C = np.linalg.inv(hess)
 
     # Return the parameters and the variance covariance matrix
-    return h, C
+    return h_external, C
 
-def fit_supergaussian(image, image_weights, sigma_threshold=4, sigma_threshold_guess=1, batches=15, epochs=1):
+def fit_supergaussian(image, image_weights, sigma_threshold=4,
+                      sigma_threshold_guess=1, nbatch=5, epochs=4,
+                      smoothing=3, LMA_lambda=1):
     # Calculate the threshold
     threshold = np.exp(-1*sigma_threshold**2/2)
 
@@ -200,11 +218,27 @@ def fit_supergaussian(image, image_weights, sigma_threshold=4, sigma_threshold_g
         image = np.ma.array(image)
 
     # Get a median filtered image for thresholding
-    image_filtered = ndimage.median_filter(image, size=6)
+    image_filtered = ndimage.median_filter(image, size=smoothing)
 
     # Make a good initial guess
     guess = fit_gaussian_linear_least_squares(image_filtered,
                         sigma_threshold=sigma_threshold_guess)[0]
+
+    # Get the Y data
+    image_unwrapped = image.ravel()
+
+    # Create a mask based on a threshold and a the actual mask
+    mask_from_image = (image.mask == False)
+
+    # Find the peak and bottom
+    masked_image = np.array(image)[mask_from_image].ravel()
+    ind = np.argsort(masked_image)
+    low = np.mean(masked_image[ind][2:12])
+    high = np.mean(masked_image[ind][-12:-2])
+
+    # Make the threshold mask
+    mask_from_threshold = (image - low)/(high - low) > threshold
+    mask_combined = np.logical_and(mask_from_image, mask_from_threshold).ravel()
 
     # Convert to the new guess
     h0 = np.array([
@@ -214,17 +248,10 @@ def fit_supergaussian(image, image_weights, sigma_threshold=4, sigma_threshold_g
         -guess[1]*guess[3]**2,
         (1+guess[1]**2)/guess[2]**2*guess[3]**2,
         guess[6],
-        guess[0],
-        guess[7]
+        high - low,
+        low
     ])
 
-    # Get the Y data
-    image_unwrapped = image.ravel()
-
-    # Create a mask based on a threshold and a the actual mask
-    mask_from_image = (image.mask == False)
-    mask_from_threshold = (image_filtered-image_filtered.min())/image_filtered.max()>threshold
-    mask_combined = np.logical_and(mask_from_image, mask_from_threshold).ravel()
 
     # Mask the array
     y = np.array(image_unwrapped[mask_combined])
@@ -238,7 +265,7 @@ def fit_supergaussian(image, image_weights, sigma_threshold=4, sigma_threshold_g
     x = MN[:, mask_combined]
 
     # Fit it
-    h, C = fit_stochastic_LMA(x, y, w, h0, batches=batches, epochs=epochs)
+    h, C = fit_stochastic_LMA(x, y, w, h0, nbatch=nbatch, epochs=epochs, LMA_lambda=LMA_lambda)
 
     # Return the fit and the covariance variance matrix
     return h, C
@@ -331,7 +358,15 @@ def plot_threshold(image, sigma_threshold=4):
 
     # Get the mask
     mask_from_image = (image.mask == False)
-    mask_from_threshold = (image_filtered-image_filtered.min())/image_filtered.max()  > threshold
+
+    # Find the peak and bottom
+    masked_image = np.array(image)[mask_from_image].ravel()
+    ind = np.argsort(masked_image)
+    low = np.mean(masked_image[ind][2:12])
+    high = np.mean(masked_image[ind][-12:-2])
+
+    # Make the threshold mask
+    mask_from_threshold = (image - low)/(high - low) > threshold
     mask_combined = np.logical_and(mask_from_image, mask_from_threshold)
 
     # Show it
