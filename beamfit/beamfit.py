@@ -146,12 +146,45 @@ def chunkIt(seq, num):
 fit_func = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: supergaussian(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)
 fit_func_jac = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: np.array(supergaussian_grad(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)).T
 
-def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=5, epochs=4):
-    # Convert to out non-negative internal parameters
-    h_internal = np.copy(h0)
-    h_internal[2] = np.sqrt(h_internal[2])
-    h_internal[4] = np.sqrt(h_internal[4])
-    h_internal[5] = np.sqrt(h_internal[5])
+def h_to_hb(h):
+    return np.array([
+        h[0],
+        h[1],
+        np.sqrt(h[2]),
+        h[3],
+        np.sqrt(h[2]*h[4] - h[3]**2),
+        np.sqrt(h[5]),
+        h[6],
+        h[7]
+    ])
+
+def h_to_hb_grad(hb, grad):
+    return np.array([
+        grad[0,:],
+        grad[1,:],
+        2*hb[2]*grad[2,:] - ((2*(hb[3]**2 + hb[4]**2))/hb[2]**3)*grad[4,:],
+        grad[3,:] + (2*hb[3])/hb[2]**2*grad[4,:],
+        (2*hb[4])/hb[2]**2*grad[4,:],
+        2*hb[5]*grad[5,:],
+        grad[6,:],
+        grad[7,:]
+    ])
+
+def hb_to_h(hb):
+    return np.array([
+        hb[0],
+        hb[1],
+        hb[2]**2,
+        hb[3],
+        (hb[3]**2 + hb[4]**2)/hb[2]**2,
+        hb[5]**2,
+        hb[6],
+        hb[7]
+    ])
+
+def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=8, epochs=4):
+    # Convert to the bounded internal parameters
+    hb = h_to_hb(h0)
 
     for _ in range(epochs):
         # Get a batch
@@ -161,55 +194,37 @@ def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=5, epochs=4):
 
         # Minimize once for each batch
         for batch in batches:
-            # Convert h for the model
-            h_external = np.copy(h_internal)
-            h_external[2] = h_external[2]**2
-            h_external[4] = h_external[4]**2
-            h_external[5] = h_external[5]**2
-
-            # Calculate the gradient and value of the function, but with non-negative parameters squared
-            root_weight = np.sqrt(w[batch])
-            model_grad = (fit_func_jac(x[:,batch], *h_external).T).T
-            model = root_weight*(h_external[-2]*model_grad[:, -2] + h_external[-1])
-            model_grad = (model_grad.T*root_weight).T
-            model_grad = model_grad*np.array([1.0, 1.0, 2*h_internal[2], 1.0, 2*h_internal[4], 2*h_internal[5], 1.0, 1.0])
+            # Calculate the gradient and value of the function
+            model_grad = np.sqrt(w[batch])*h_to_hb_grad(hb, fit_func_jac(x[:,batch], *hb_to_h(hb)).T)
+            model = hb[-2]*model_grad[-2,:] + np.sqrt(w[batch])*hb[-1]
 
             # Turn this into the gradient of the loss function and the approximation of the hessian
-            grad = 2*model_grad.T@(root_weight*y[batch] - model).T
-            LHS = model_grad.T @ model_grad
+            loss_grad = 2*model_grad @ (np.sqrt(w[batch])*y[batch] - model).T
+            hess = model_grad @ model_grad.T
 
             # Add the LMA damping term
             diag = np.diag_indices(8)
-            LHS[diag] = LHS[diag]*(1+LMA_lambda)
+            hess[diag] = hess[diag]*(1+LMA_lambda)
 
             # Calculate the update
-            delta = np.linalg.solve(LHS, grad)
+            delta = np.linalg.solve(hess, loss_grad)
 
-            # Update the model
-            h_internal = h_internal + delta
-
-    # Convert h for the model
-    h_external = np.copy(h_internal)
-    h_external[2] = h_external[2]**2
-    h_external[4] = h_external[4]**2
-    h_external[5] = h_external[5]**2
+            # Update the parameters
+            hb = hb + delta
 
     # Calculate the Hessian of the loss function for error estimation
-    root_weight = np.sqrt(w)
-    model_grad = (fit_func_jac(x, *h_external).T).T
-    model = h_external[-2]*model_grad[:, -2] + h_external[-1]
-    grad = 2*root_weight*model_grad.T@(root_weight*y - root_weight*model).T
-    hess = (root_weight*model_grad.T)@(root_weight*model_grad.T).T
+    model_grad = np.sqrt(w[batch])*h_to_hb_grad(hb, fit_func_jac(x[:,batch], *hb_to_h(hb)).T)
+    hess = model_grad @ model_grad.T
 
     # Invert to get the variance-covariance matrix
     C = np.linalg.inv(hess)
 
     # Return the parameters and the variance covariance matrix
-    return h_external, C
+    return hb_to_h(hb), C
 
 def fit_supergaussian(image, image_weights, sigma_threshold=4,
-                      sigma_threshold_guess=1, nbatch=5, epochs=4,
-                      smoothing=3, LMA_lambda=1):
+                      sigma_threshold_guess=1, nbatch=8, epochs=4,
+                      smoothing=5, LMA_lambda=1):
     # Calculate the threshold
     threshold = np.exp(-1*sigma_threshold**2/2)
 
@@ -251,7 +266,6 @@ def fit_supergaussian(image, image_weights, sigma_threshold=4,
         high - low,
         low
     ])
-
 
     # Mask the array
     y = np.array(image_unwrapped[mask_combined])
