@@ -32,12 +32,14 @@ setuptools.setup(
         author='Christopher M. Pierce',
         author_email='contact@chris-pierce.com',
         python_requires='>=3.1',
-        packages=['beamfit'],
+        packages=setuptools.find_packages(),
         install_requires = [
           'numpy',
           'matplotlib',
           'scipy'
         ],
+        package_data={'': ['tests/test_data.pickle']},
+        include_package_data=True,
         ext_modules = ext_modules,
         license = 'GNU Affero General Public License v3 or later (AGPLv3+)',
         classifiers = [

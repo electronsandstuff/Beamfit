@@ -27,8 +27,7 @@ import scipy.integrate as integrate
 import scipy.ndimage as ndimage
 import scipy.special as special
 import matplotlib.pyplot as plt
-from . import gaussufunc
-from .gaussufunc import *
+from beamfit.gaussufunc import *
 
 ################################################################################
 # Helper Functions
@@ -269,7 +268,7 @@ def fit_supergaussian(image, image_weights=None, prediction_func=None, sigma_thr
     if(not np.ma.isMaskedArray(image)):
         image = np.ma.array(image)
 
-    if(image_weights == None):
+    if(type(image_weights) == type(None)):
         image_weights = np.ones_like(image)
 
     # Get a median filtered image for thresholding

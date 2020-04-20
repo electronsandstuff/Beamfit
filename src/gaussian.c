@@ -53,7 +53,7 @@ static void double_supergaussian(char **args, npy_intp *dimensions, npy_intp* st
 
         // Increment the pointers
         for(j=0; j<11; j++){
-          (char *) args_copy[j] += steps[j];
+          args_copy[j] = (double *) ((char *)args_copy[j] + steps[j]);
         }
     }
 }
@@ -110,7 +110,7 @@ static void double_supergaussian_grad(char **args, npy_intp *dimensions, npy_int
 
       // Increment the pointers
       for(j=0; j<20; j++){
-        (char *) args_copy[j] += steps[j];
+        args_copy[j] = (double *) ((char *)args_copy[j] + steps[j]);
       }
   }
 }
