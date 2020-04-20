@@ -31,9 +31,18 @@ from . import gaussufunc
 from .gaussufunc import *
 
 ################################################################################
-# Functions for fitting
+# Helper Functions
 ################################################################################
-def fit_gaussian_linear_least_squares(image, sigma_threshold=0.5, plot=False):
+def get_image_and_weight(raw_images, dark_fields, mask):
+    image = np.ma.masked_array(data=np.mean(raw_images, axis=0) - np.mean(dark_fields, axis=0), mask=mask)
+    std_image  = np.ma.masked_array(data=np.sqrt(np.std(raw_images, axis=0)**2 + np.std(dark_fields, axis=0)**2), mask=mask)
+    image_weight = len(raw_images)/std_image**2
+    return image, image_weight
+
+################################################################################
+# Initial Parameter Prediction
+################################################################################
+def fit_gaussian_linear_least_squares(image, sigma_threshold=2, plot=False):
     '''Fits an image to a normal gaussian using linear least squares.  This
     method is intended to be used as a stable starting point to find a guess
     for the non-linear fitting routine'''
@@ -122,15 +131,30 @@ def fit_gaussian_linear_least_squares(image, sigma_threshold=0.5, plot=False):
     root_beta = np.sqrt(-2*x[5]/np.sqrt(4*x[2]*x[5] - x[4]**2))
     root_epsilon = np.sqrt(2/np.sqrt(4*x[2]*x[5] - x[4]**2))
 
-    # Calculate the amplitude
-    A = np.exp(x[0] - 2*mu[0]*mu[1]*alpha/root_epsilon**2 +
-            mu[0]**2/root_beta**2/root_epsilon**2 +
-            mu[0]*alpha**2/root_beta**2/root_epsilon**2 +
-            mu[1]**2*root_beta**2/root_epsilon**2)
+    # Find the peak and bottom
+    masked_image = np.array(image)[mask_from_image].ravel()
+    ind = np.argsort(masked_image)
+    low = np.mean(masked_image[ind][2:12])
+    high = np.mean(masked_image[ind][-12:-2])
+
+    # Convert to the new guess
+    h0 = np.array([
+        mu[0],
+        mu[1],
+        root_beta**2*root_epsilon**2,
+        -alpha*root_epsilon**2,
+        (1+alpha**2)/root_beta**2*root_epsilon**2,
+        1,
+        high - low,
+        low
+    ])
 
     # Return the fit
-    return np.array([A, alpha, root_beta, root_epsilon, mu[0], mu[1], 1, 0.0]), residual
+    return h0
 
+################################################################################
+# Functions for fitting
+################################################################################
 def chunkIt(seq, num):
     avg = len(seq) / float(num)
     out = []
@@ -182,6 +206,21 @@ def hb_to_h(hb):
         hb[7]
     ])
 
+def fitfun_bounded(xdata, mux, muy, sxx, vxy, sdt, sn, a, o):
+    h = hb_to_h(np.array([mux, muy, sxx, vxy, sdt, sn, a, o]))
+    return supergaussian(xdata[0], xdata[1], *h)
+
+def fitjac_bounded(xdata, mux, muy, sxx, vxy, sdt, sn, a, o):
+    hb = np.array([mux, muy, sxx, vxy, sdt, sn, a, o])
+    h = hb_to_h(hb)
+    return h_to_hb_grad(hb, np.array(supergaussian_grad(xdata[0], xdata[1], *h))).T
+
+def fit_scipy_curvefit(x, y, w, h0):
+    # Call scipy's curve_fit
+    h, C = opt.curve_fit(fitfun_bounded, x, y, h_to_hb(h0), 1/np.sqrt(w), absolute_sigma=True, jac=fitjac_bounded)
+
+    return hb_to_h(h), C
+
 def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=8, epochs=4):
     # Convert to the bounded internal parameters
     hb = h_to_hb(h0)
@@ -222,9 +261,7 @@ def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=8, epochs=4):
     # Return the parameters and the variance covariance matrix
     return hb_to_h(hb), C
 
-def fit_supergaussian(image, image_weights, sigma_threshold=4,
-                      sigma_threshold_guess=1, nbatch=8, epochs=4,
-                      smoothing=5, LMA_lambda=1):
+def fit_supergaussian(image, image_weights=None, prediction_func=None, sigma_threshold=3, sigma_threshold_guess=1, nbatch=8, epochs=4, smoothing=5, LMA_lambda=1):
     # Calculate the threshold
     threshold = np.exp(-1*sigma_threshold**2/2)
 
@@ -232,14 +269,20 @@ def fit_supergaussian(image, image_weights, sigma_threshold=4,
     if(not np.ma.isMaskedArray(image)):
         image = np.ma.array(image)
 
+    if(image_weights == None):
+        image_weights = np.ones_like(image)
+
     # Get a median filtered image for thresholding
     image_filtered = ndimage.median_filter(image, size=smoothing)
 
     # Make a good initial guess
-    guess = fit_gaussian_linear_least_squares(image_filtered,
-                        sigma_threshold=sigma_threshold_guess)[0]
+    if(prediction_func == None):
+        h0 = fit_gaussian_linear_least_squares(image_filtered, sigma_threshold=sigma_threshold_guess)
+    else:
+        h0 = prediction_func(image)
 
     # Get the Y data
+    #image_unwrapped = ndimage.median_filter(image, size=2).ravel()
     image_unwrapped = image.ravel()
 
     # Create a mask based on a threshold and a the actual mask
@@ -251,35 +294,24 @@ def fit_supergaussian(image, image_weights, sigma_threshold=4,
     low = np.mean(masked_image[ind][2:12])
     high = np.mean(masked_image[ind][-12:-2])
 
-    # Make the threshold mask
-    mask_from_threshold = (image - low)/(high - low) > threshold
-    mask_combined = np.logical_and(mask_from_image, mask_from_threshold).ravel()
+    # Get the X data
+    M, N = np.mgrid[:image.shape[0], :image.shape[1]]
+    MN = np.vstack((M.ravel(), N.ravel()))
 
-    # Convert to the new guess
-    h0 = np.array([
-        guess[4],
-        guess[5],
-        guess[2]**2*guess[3]**2,
-        -guess[1]*guess[3]**2,
-        (1+guess[1]**2)/guess[2]**2*guess[3]**2,
-        guess[6],
-        high - low,
-        low
-    ])
+    # Make the threshold mask
+    thresh_image = supergaussian(M, N, h0[0], h0[1], h0[2], h0[3], h0[4], 1, 1, 0)
+    mask_from_threshold = thresh_image > threshold
+    mask_combined = np.logical_and(mask_from_image, mask_from_threshold).ravel()
 
     # Mask the array
     y = np.array(image_unwrapped[mask_combined])
     w = np.array(image_weights.ravel()[mask_combined])
 
-    # Get the X data
-    M, N = np.mgrid[:image.shape[0], :image.shape[1]]
-    MN = np.vstack((M.ravel(), N.ravel()))
-
     # Mask it
     x = MN[:, mask_combined]
 
     # Fit it
-    h, C = fit_stochastic_LMA(x, y, w, h0, nbatch=nbatch, epochs=epochs, LMA_lambda=LMA_lambda)
+    h, C = fit_scipy_curvefit(x, y, w, h0)
 
     # Return the fit and the covariance variance matrix
     return h, C
@@ -313,8 +345,9 @@ def get_mu_sigma_std(h, C, pixel_size, pixel_size_std):
     # Calculate mu's variance
     mu_var = np.array([C[0,0], C[1,1]])
 
-    # Calculate Sigma's variance
-    sigma_var = np.array([[C[2,2], C[3,3]], [C[3,3], C[4,4]]])
+    # Calculate Sigma's variance (hack for now to deal w/ uncertainty)
+    sigma_var = np.array([[C[2,2]*2*np.sqrt(h[2]), C[3,3]], [C[3,3], C[2,2]*2*np.sqrt(h[2])]])
+
     n = h[5]
     n_var = C[5,5]
     scaling_factor_deriv = scaling_factor*(-1*np.log(8) + special.polygamma(0, 1/n + 0.5))/n**2
@@ -352,10 +385,18 @@ def pretty_print_loc_and_size(h, C, pixel_size, pixel_size_std):
 ################################################################################
 # Fit plotting
 ################################################################################
-def plot_residuals(image, h):
+def plot_residuals(image, h, sigma_threshold=2):
+    # Calculate the threshold
+    threshold = np.exp(-1*sigma_threshold**2/2)
+
     M, N = np.mgrid[:image.shape[0], :image.shape[1]]
-    residual = image - supergaussian(M,N,*h)
-    plt.imshow(residual, cmap='seismic')
+    sg = supergaussian(M, N, *h)
+    thresh_image = supergaussian(M, N, h[0], h[1], h[2], h[3], h[4], 1, 1, 0)
+
+    residual = image - sg
+    mask = thresh_image < threshold
+    ma_residual = np.ma.masked_array(data=residual, mask=mask)
+    plt.imshow(ma_residual, cmap='seismic')
 
 def plot_beam_contours(image, h):
     plt.imshow(image)
