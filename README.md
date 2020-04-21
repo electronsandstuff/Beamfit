@@ -2,7 +2,7 @@
 This library contains methods to fit for the size of a beam in a noisy 2D image
 
 ## Installation and Testing
-Be sure that numpy is installed prior to setup.  Compile and isntall the package with pip.
+Compile and isntall the package with pip.
 
 ```bash
 pip install <path to unzipped beamfit directory>
