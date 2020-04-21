@@ -32,7 +32,7 @@ class build_ext(_build_ext):
         self.include_dirs.append(numpy.get_include())
 
 # Add in my c-extension
-ext_modules = [setuptools.Extension('beamfit.gaussufunc', sources = ['src/gaussian.c'], cmdclass = build_ext)]
+ext_modules = [setuptools.Extension('beamfit.gaussufunc', sources = ['src/gaussian.c'],)]
 
 # Write out the pacakge metadata
 metadata = dict(
@@ -59,6 +59,7 @@ metadata = dict(
           "Operating System :: OS Independent",
         ],
         ext_modules = ext_modules,
+        cmdclass = {'build_ext': build_ext}
     )
 
 
