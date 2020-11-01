@@ -325,7 +325,7 @@ def get_mu_sigma(h, pixel_size):
     # Get sigma
     sigma = np.array([[h[2], h[3]], [h[3], h[4]]])
     n = h[5]
-    scaling_factor = np.power(2, 3/n - 2)*special.gamma(1/n + 0.5)/np.sqrt(np.pi)
+    scaling_factor = special.gamma((2+n)/n)/2/special.gamma(1 + 1/n)
     sigma = sigma*scaling_factor*pixel_size**2
 
     # Return them
@@ -338,7 +338,7 @@ def get_mu_sigma_std(h, C, pixel_size, pixel_size_std):
     # Get sigma
     sigma = np.array([[h[2], h[3]], [h[3], h[4]]])
     n = h[5]
-    scaling_factor = np.power(2, 3/n - 2)*special.gamma(1/n + 0.5)/np.sqrt(np.pi)
+    scaling_factor = special.gamma((2+n)/n)/2/special.gamma(1 + 1/n)
     sigma = sigma*scaling_factor
 
     # Calculate mu's variance
@@ -349,7 +349,9 @@ def get_mu_sigma_std(h, C, pixel_size, pixel_size_std):
 
     n = h[5]
     n_var = C[5,5]
-    scaling_factor_deriv = scaling_factor*(-1*np.log(8) + special.polygamma(0, 1/n + 0.5))/n**2
+    scaling_factor_deriv = special.gamma((2+n)/n)/2/n**2*special.polygamma(0, 1 + 1/n)
+    scaling_factor_deriv += (1/n - (2+n)/n**2)*special.gamma((2+n)/n)*special.polygamma(0, (2+n)/n)/2
+    scaling_factor_deriv /= special.gamma(1 + 1 / n)
     scaling_factor_var = n_var*scaling_factor_deriv**2
     sigma_var = sigma_var*scaling_factor_var + sigma**2*scaling_factor_var + scaling_factor**2*sigma_var
 
