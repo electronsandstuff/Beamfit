@@ -200,7 +200,7 @@ def fit_gaussian_1d(image):
 ################################################################################
 # Functions for fitting
 ################################################################################
-def chunkIt(seq, num):
+def chunk_it(seq, num):
     avg = len(seq) / float(num)
     out = []
     last = 0.0
@@ -213,12 +213,15 @@ def chunkIt(seq, num):
 
 
 # Wrapper functions
-fit_func = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: supergaussian(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n,
-                                                                         a, o)
-fit_func_jac = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: np.array(
-    supergaussian_grad(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)).T
+def fit_func(xdata, mux, muy, vxx, vxy, vyy, n, a, o):
+    return supergaussian(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)
 
 
+def fit_func_jac(xdata, mux, muy, vxx, vxy, vyy, n, a, o):
+    return supergaussian_grad(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o).T
+
+
+# Functions to convert from bounded parameters to parameters for unbounded optimization
 def h_to_hb(h):
     return np.array([
         h[0],
@@ -284,7 +287,7 @@ def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=8, epochs=4):
         # Get a batch
         idx = np.arange(x.shape[1])
         np.random.shuffle(idx)
-        batches = chunkIt(idx, nbatch)
+        batches = chunk_it(idx, nbatch)
 
         # Minimize once for each batch
         for batch in batches:
