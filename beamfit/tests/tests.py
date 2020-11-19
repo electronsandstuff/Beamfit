@@ -113,3 +113,23 @@ class TestBeamfit(unittest.TestCase):
         # Compare them
         self.assertTrue(np.isclose(mu_ref, mu_test).all())
         self.assertTrue(np.isclose(sigma_ref, sigma_test).all())
+
+    def test_fit_gaussian_1d(self):
+        # Make a list of functions to check
+        h_refs = [
+            np.array([128, 256, 128**2, 0.0, 8**2, 1, 1.0, 0.06]),
+            np.array([115, 345, 32 ** 2, 0.0, 16 ** 2, 1, 10.0, 0.15]),
+            np.array([132, 375, 16 ** 2, 0.0, 16 ** 2, 1, 432.0, -23]),
+            np.array([142, 128, 25 ** 2, 0.0, 19 ** 2, 1, 253.0, 432]),
+        ]
+
+        for h_ref in h_refs:
+            # Generate the image
+            X, Y = np.mgrid[:256, :512]
+            sg = beamfit.supergaussian(X, Y, *h_ref)
+
+            # Run the parameter estimation
+            h_test = beamfit.fit_gaussian_1d(sg)
+
+            # Compare them
+            self.assertTrue(np.isclose(h_ref, h_test).all())
