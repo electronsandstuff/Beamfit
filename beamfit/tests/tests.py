@@ -12,6 +12,7 @@ import numpy as np
 # Imports
 ################################################################################
 import beamfit
+import gaussufunc
 
 
 ################################################################################
@@ -50,7 +51,7 @@ class TestBeamfit(unittest.TestCase):
         valid = self.test_data['gaussufunc']['supergaussian']
 
         # Compute the test function
-        test = beamfit.gaussufunc.supergaussian(X, Y, *h)
+        test = gaussufunc.supergaussian(X, Y, *h)
 
         # Test it
         self.assertTrue(np.isclose(valid, test).all())
@@ -63,7 +64,7 @@ class TestBeamfit(unittest.TestCase):
         valid = self.test_data['gaussufunc']['supergaussian_grad']
 
         # Compute the test function
-        test = beamfit.gaussufunc.supergaussian_grad(X, Y, *h)
+        test = gaussufunc.supergaussian_grad(X, Y, *h)
 
         # Test it
         for t, v in zip(valid, test):
