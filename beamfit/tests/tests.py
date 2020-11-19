@@ -67,13 +67,14 @@ class TestBeamfit(unittest.TestCase):
         valid_h = self.test_data['supergaussian_fit_data']['labels'][0][0]
         valid_C = self.test_data['supergaussian_fit_data']['labels'][0][1]
 
-        # Fit it
-        test_h, test_C = beamfit.fit_supergaussian(test_image,
-                                                   np.ones_like(test_image))
-
-        # Compare
+        # Fit it and Compare
+        test_h, test_C = beamfit.fit_supergaussian(test_image)
         self.assertTrue(np.isclose(test_h, valid_h).all())
         self.assertTrue(np.isclose(test_C, valid_C).all())
+
+        # Do it again with the other prediction methods
+        test_h, test_C = beamfit.fit_supergaussian(test_image, prediction_func="1D_Gaussian")
+        self.assertTrue(np.isclose(test_h, valid_h, rtol=1e-1).all())
 
     def test_supergaussian(self):
         # Pull out the test data

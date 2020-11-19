@@ -317,29 +317,32 @@ def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=8, epochs=4):
     return hb_to_h(hb), C
 
 
-def fit_supergaussian(image, image_weights=None, prediction_func=None, sigma_threshold=3, sigma_threshold_guess=1,
-                      nbatch=8, epochs=4, smoothing=5, LMA_lambda=1):
+def fit_supergaussian(image, image_weights=None, prediction_func="2D_linear_Gaussian", sigma_threshold=3,
+                      sigma_threshold_guess=1, smoothing=5):
     # Calculate the threshold
     threshold = np.exp(-1 * sigma_threshold ** 2 / 2)
 
     # If there isn't a mask, make one
-    if (not np.ma.isMaskedArray(image)):
+    if not np.ma.isMaskedArray(image):
         image = np.ma.array(image)
 
-    if (type(image_weights) == type(None)):
+    if image_weights is None:
         image_weights = np.ones_like(image)
 
     # Get a median filtered image for thresholding
     image_filtered = ndimage.median_filter(image, size=smoothing)
 
     # Make a good initial guess
-    if (prediction_func == None):
+    if prediction_func == "2D_linear_Gaussian":
         h0 = fit_gaussian_linear_least_squares(image_filtered, sigma_threshold=sigma_threshold_guess)
+
+    elif prediction_func == "1D_Gaussian":
+        h0 = fit_gaussian_1d(image_filtered)
+
     else:
-        h0 = prediction_func(image)
+        raise ValueError("Unrecognized prediction method \"{:s}\"".format(prediction_func))
 
     # Get the Y data
-    # image_unwrapped = ndimage.median_filter(image, size=2).ravel()
     image_unwrapped = image.ravel()
 
     # Create a mask based on a threshold and a the actual mask
