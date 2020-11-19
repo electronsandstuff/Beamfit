@@ -6,6 +6,5 @@
 ################################################################################
 
 # Import everything from the module
-from . import gaussufunc
 from . import tests
 from .beamfit import *

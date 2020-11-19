@@ -26,7 +26,7 @@ import numpy as np
 import scipy.ndimage as ndimage
 import scipy.optimize as opt
 import scipy.special as special
-from beamfit.gaussufunc import *
+from gaussufunc import *
 
 
 ################################################################################
