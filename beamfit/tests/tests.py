@@ -16,6 +16,38 @@ import gaussufunc
 
 
 ################################################################################
+# Helper functions
+################################################################################
+def get_mu_sigma_numerical(h):
+    """
+    Evaluates the mean and variance/co-variance of the super-Gaussian numerically.  Generates an image with 10 sigma
+    worth of tails.  Sums up the values X*rho, Y*rho, X^2*rho, X*Y*rho, and Y^2*rho.
+    """
+    # Estimate what the mean and standard deviation of the thing should be and make a test image to numerically
+    # integrate at 10 sigma on each side
+    mu, std = beamfit.get_mu_sigma(h, 1.0)
+    sigma = 10
+    xmin = int(mu[0] - sigma*np.sqrt(std[0,0]))
+    xmax = int(mu[0] + sigma*np.sqrt(std[0,0]))
+    ymin = int(mu[1] - sigma*np.sqrt(std[1,1]))
+    ymax = int(mu[1] + sigma*np.sqrt(std[1,1]))
+    Xn, Yn = np.mgrid[xmin:xmax, ymin:ymax]
+    sgn = beamfit.supergaussian(Xn, Yn, *h) - h[-1]
+
+    # Numerically integrate to find mean and variance
+    norm = np.sum(sgn)
+    mux = np.sum(Xn * sgn) / norm
+    muy = np.sum(Xn * sgn) / norm
+    Vxx = np.sum(Xn ** 2 * sgn) / norm
+    Vxy = np.sum(Xn * Yn * sgn) / norm
+    Vyy = np.sum(Yn ** 2 * sgn) / norm
+    mu = np.array([mux, muy])
+    sigma = np.array([[Vxx, Vxy], [Vxy, Vyy]]) - mu[:, None]*mu[None, :]
+
+    return mu, sigma
+
+
+################################################################################
 # The tests
 ################################################################################
 class TestBeamfit(unittest.TestCase):
@@ -71,38 +103,13 @@ class TestBeamfit(unittest.TestCase):
             self.assertTrue(np.isclose(v, t).all())
 
     def test_get_mu_sigma(self):
-        # Get the test data
-        h = self.test_data['mu_sigma']['h']
-        C = self.test_data['mu_sigma']['C']
-        pixel_size = self.test_data['mu_sigma']['pixel_size']
-        pixel_size_std = self.test_data['mu_sigma']['pixel_size_std']
-        mu = self.test_data['mu_sigma']['mu']
-        mu_std = self.test_data['mu_sigma']['mu_std']
-        sigma = self.test_data['mu_sigma']['sigma']
-        sigma_std = self.test_data['mu_sigma']['sigma_std']
+        # Numerically find the reference values for the image
+        h_test = np.array([128, 128, 50**2, 0.0, 40**2, 0.8, 1.0, 0.05])
+        mu_ref, sigma_ref = get_mu_sigma_numerical(h_test)
 
-        # Compute the test
-        test_mu, test_sigma = beamfit.get_mu_sigma(h, pixel_size)
+        # Find the test values from the library
+        mu_test, sigma_test = beamfit.get_mu_sigma(h_test, 1.0)
 
         # Compare them
-        self.assertTrue(np.isclose(mu, test_mu).all())
-        self.assertTrue(np.isclose(sigma, test_sigma).all())
-
-    def test_get_mu_sigma_std(self):
-        # Get the test data
-        h = self.test_data['mu_sigma']['h']
-        C = self.test_data['mu_sigma']['C']
-        pixel_size = self.test_data['mu_sigma']['pixel_size']
-        pixel_size_std = self.test_data['mu_sigma']['pixel_size_std']
-        mu = self.test_data['mu_sigma']['mu']
-        mu_std = self.test_data['mu_sigma']['mu_std']
-        sigma = self.test_data['mu_sigma']['sigma']
-        sigma_std = self.test_data['mu_sigma']['sigma_std']
-
-        # Compute the test
-        test_mu_std, test_sigma_std = beamfit.get_mu_sigma_std(h, C,
-                                                               pixel_size, pixel_size_std)
-
-        # Compare them
-        self.assertTrue(np.isclose(mu_std, test_mu_std).all())
-        self.assertTrue(np.isclose(sigma_std, test_sigma_std).all())
+        self.assertTrue(np.isclose(mu_ref, mu_test).all())
+        self.assertTrue(np.isclose(sigma_ref, sigma_test).all())
