@@ -261,6 +261,17 @@ def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=8, epochs=4):
     return hb_to_h(hb), C
 
 def fit_supergaussian(image, image_weights=None, prediction_func=None, sigma_threshold=3, sigma_threshold_guess=1, nbatch=8, epochs=4, smoothing=5, LMA_lambda=1):
+    # Double check the input
+    if not isinstance(image, (list, np.ndarray)):
+        raise ValueError(f"Image provided to supergaussian fit must be numpy compatible not the received type:"
+                         f" \"{type(image)}\"")
+    if isinstance(image, list):
+        image = np.array(image)
+    if len(image.shape) != 2:
+        raise ValueError(f"Image array provided to superagussian fit must have dimension 2, not {len(image.shape)}")
+    if image.size == 0:
+        raise ValueError(f"Image array provided to superagussian fit must contain more than zero pixels")
+
     # Calculate the threshold
     threshold = np.exp(-1*sigma_threshold**2/2)
 
