@@ -26,18 +26,7 @@ import numpy as np
 import scipy.ndimage as ndimage
 import scipy.optimize as opt
 from beamfit.gaussufunc import *
-
-
-################################################################################
-# Helper Functions
-################################################################################
-def get_image_and_weight(raw_images, dark_fields, mask):
-    image = np.ma.masked_array(data=np.mean(raw_images, axis=0) - np.mean(dark_fields, axis=0), mask=mask)
-    std_image = np.ma.masked_array(data=np.sqrt(np.std(raw_images, axis=0) ** 2 + np.std(dark_fields, axis=0) ** 2),
-                                   mask=mask)
-    image_weight = len(raw_images) / std_image ** 2
-    return image, image_weight
-
+from .utils import chunk_it
 
 ################################################################################
 # Initial Parameter Prediction
@@ -156,16 +145,6 @@ def fit_gaussian_linear_least_squares(image, sigma_threshold=2, plot=False):
 ################################################################################
 # Functions for fitting
 ################################################################################
-def chunkIt(seq, num):
-    avg = len(seq) / float(num)
-    out = []
-    last = 0.0
-
-    while last < len(seq):
-        out.append(seq[int(last):int(last + avg)])
-        last += avg
-
-    return out
 
 
 # Wrapper functions
@@ -241,7 +220,7 @@ def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=8, epochs=4):
         # Get a batch
         idx = np.arange(x.shape[1])
         np.random.shuffle(idx)
-        batches = chunkIt(idx, nbatch)
+        batches = chunk_it(idx, nbatch)
 
         # Minimize once for each batch
         for batch in batches:
