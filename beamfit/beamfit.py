@@ -18,7 +18,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-import matplotlib.pyplot as plt
 ################################################################################
 # Imports
 ################################################################################
@@ -27,6 +26,7 @@ import scipy.ndimage as ndimage
 import scipy.optimize as opt
 from beamfit.gaussufunc import *
 from .utils import chunk_it
+
 
 ################################################################################
 # Initial Parameter Prediction
@@ -84,27 +84,6 @@ def fit_gaussian_linear_least_squares(image, sigma_threshold=2, plot=False):
     # Get the fit image and residuals
     fit_image = np.exp(np.reshape(A_full @ x, image.shape))
     residual = fit_image - image
-
-    # If we are plotting it
-    if (plot):
-        # Set the plots to be larger
-        plt.rcParams["figure.figsize"] = 12, 3.5
-
-        # Show the fit
-        font = {'family': 'DejaVu Sans',
-                'weight': 'normal',
-                'size': 12}
-        plt.rc('font', **font)
-
-        # Plot the image and the fit and the residual
-        ax1 = plt.subplot(131)
-        ax2 = plt.subplot(132)
-        ax3 = plt.subplot(133)
-
-        # Show them
-        ax1.imshow(image)
-        ax2.imshow(fit_image)
-        ax3.imshow(residual)
 
     # Find the centroid from the fit
     mu = np.array([
@@ -254,7 +233,7 @@ def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=8, epochs=4):
 
 
 def fit_supergaussian(image, image_weights=None, prediction_func=None, sigma_threshold=3, sigma_threshold_guess=1,
-                      nbatch=8, epochs=4, smoothing=5, LMA_lambda=1, maxfev=100):
+                     smoothing=5, maxfev=100):
     # Double check the input
     if not isinstance(image, (list, np.ndarray)):
         raise ValueError(f"Image provided to supergaussian fit must be numpy compatible not the received type:"
