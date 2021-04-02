@@ -31,7 +31,7 @@ import scipy.special as special
 import matplotlib.pyplot as plt
 from gaussufunc import *
 from .utils import chunk_it
-from .initial_parameter_estimation import fit_gaussian_linear_least_squares
+from .initial_parameter_estimation import fit_gaussian_linear_least_squares, fit_gaussian_1d
 
 
 # Wrapper functions
@@ -148,8 +148,8 @@ def fit_stochastic_lma(x, y, w, h0, LMA_lambda=1, nbatch=8, epochs=4):
     return hb_to_h(hb), C
 
 
-def fit_supergaussian(image, image_weights=None, prediction_func=None, sigma_threshold=3, sigma_threshold_guess=1,
-                      smoothing=5, maxfev=100):
+def fit_supergaussian(image, image_weights=None, prediction_func="2D_linear_Gaussian", sigma_threshold=3,
+                      sigma_threshold_guess=1, smoothing=5, maxfev=100):
     # Double check the input
     if not isinstance(image, (list, np.ndarray)):
         raise ValueError(f"Image provided to supergaussian fit must be numpy compatible not the received type:"
