@@ -9,3 +9,4 @@
 from . import gaussufunc
 from . import tests
 from .beamfit import *
+from .fit_param_conversion import *
