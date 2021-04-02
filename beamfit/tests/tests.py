@@ -2,14 +2,17 @@
 # Unit tests for beamfit - Christopher M. Pierce (chris@chris-pierce.com)
 ################################################################################
 
+import os
+import pickle
+import unittest
+
+import numpy as np
+
 ################################################################################
 # Imports
 ################################################################################
 import beamfit
-import pickle
-import numpy as np
-import unittest
-import os
+
 
 ################################################################################
 # The tests
@@ -33,7 +36,7 @@ class TestBeamfit(unittest.TestCase):
 
         # Fit it
         test_h, test_C = beamfit.fit_supergaussian(test_image,
-                np.ones_like(test_image))
+                                                   np.ones_like(test_image))
 
         # Compare
         self.assertTrue(np.isclose(test_h, valid_h).all())
@@ -83,7 +86,7 @@ class TestBeamfit(unittest.TestCase):
         # Compare them
         # TODO: fix test data
         # self.assertTrue(np.isclose(mu, test_mu).all())
-        #self.assertTrue(np.isclose(sigma, test_sigma).all())
+        # self.assertTrue(np.isclose(sigma, test_sigma).all())
 
     def test_get_mu_sigma_std(self):
         # Get the test data
@@ -98,14 +101,14 @@ class TestBeamfit(unittest.TestCase):
 
         # Compute the test
         test_mu_std, test_sigma_std = beamfit.get_mu_sigma_std(h, C,
-                pixel_size, pixel_size_std)
+                                                               pixel_size, pixel_size_std)
 
         # Compare them
         # TODO: fix test data
-        #self.assertTrue(np.isclose(mu_std, test_mu_std).all())
-        #self.assertTrue(np.isclose(sigma_std, test_sigma_std).all())
+        # self.assertTrue(np.isclose(mu_std, test_mu_std).all())
+        # self.assertTrue(np.isclose(sigma_std, test_sigma_std).all())
 
     def test_fit_supergaussian_bad_input(self):
-        for obj in ["i", 0, 0.0, True, [], {}, np.zeros((1, )), np.zeros((0,0))]:
+        for obj in ["i", 0, 0.0, True, [], {}, np.zeros((1,)), np.zeros((0, 0))]:
             with self.assertRaises(ValueError) as context:
                 beamfit.fit_supergaussian(obj)
