@@ -214,9 +214,10 @@ def fitjac_bounded(xdata, mux, muy, sxx, vxy, sdt, sn, a, o):
     h = hb_to_h(hb)
     return h_to_hb_grad(hb, np.array(supergaussian_grad(xdata[0], xdata[1], *h))).T
 
-def fit_scipy_curvefit(x, y, w, h0):
+def fit_scipy_curvefit(x, y, w, h0, maxfev):
     # Call scipy's curve_fit
-    h, C = opt.curve_fit(fitfun_bounded, x, y, h_to_hb(h0), 1/np.sqrt(w), absolute_sigma=True, jac=fitjac_bounded)
+    h, C = opt.curve_fit(fitfun_bounded, x, y, h_to_hb(h0), 1/np.sqrt(w), absolute_sigma=True, jac=fitjac_bounded,
+                         maxfev=maxfev)
 
     return hb_to_h(h), C
 
@@ -260,7 +261,8 @@ def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=8, epochs=4):
     # Return the parameters and the variance covariance matrix
     return hb_to_h(hb), C
 
-def fit_supergaussian(image, image_weights=None, prediction_func=None, sigma_threshold=3, sigma_threshold_guess=1, nbatch=8, epochs=4, smoothing=5, LMA_lambda=1):
+def fit_supergaussian(image, image_weights=None, prediction_func=None, sigma_threshold=3, sigma_threshold_guess=1,
+                      nbatch=8, epochs=4, smoothing=5, LMA_lambda=1, maxfev=100):
     # Double check the input
     if not isinstance(image, (list, np.ndarray)):
         raise ValueError(f"Image provided to supergaussian fit must be numpy compatible not the received type:"
@@ -276,23 +278,22 @@ def fit_supergaussian(image, image_weights=None, prediction_func=None, sigma_thr
     threshold = np.exp(-1*sigma_threshold**2/2)
 
     # If there isn't a mask, make one
-    if(not np.ma.isMaskedArray(image)):
+    if not np.ma.isMaskedArray(image):
         image = np.ma.array(image)
 
-    if(type(image_weights) == type(None)):
+    if image_weights is None:
         image_weights = np.ones_like(image)
 
     # Get a median filtered image for thresholding
     image_filtered = ndimage.median_filter(image, size=smoothing)
 
     # Make a good initial guess
-    if(prediction_func == None):
+    if prediction_func is None:
         h0 = fit_gaussian_linear_least_squares(image_filtered, sigma_threshold=sigma_threshold_guess)
     else:
         h0 = prediction_func(image)
 
     # Get the Y data
-    #image_unwrapped = ndimage.median_filter(image, size=2).ravel()
     image_unwrapped = image.ravel()
 
     # Create a mask based on a threshold and a the actual mask
@@ -321,7 +322,7 @@ def fit_supergaussian(image, image_weights=None, prediction_func=None, sigma_thr
     x = MN[:, mask_combined]
 
     # Fit it
-    h, C = fit_scipy_curvefit(x, y, w, h0)
+    h, C = fit_scipy_curvefit(x, y, w, h0, maxfev=maxfev)
 
     # Return the fit and the covariance variance matrix
     return h, C
