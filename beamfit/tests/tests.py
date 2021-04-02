@@ -84,9 +84,8 @@ class TestBeamfit(unittest.TestCase):
         test_mu, test_sigma = beamfit.get_mu_sigma(h, pixel_size)
 
         # Compare them
-        # TODO: fix test data
-        # self.assertTrue(np.isclose(mu, test_mu).all())
-        # self.assertTrue(np.isclose(sigma, test_sigma).all())
+        self.assertTrue(np.isclose(mu, test_mu).all())
+        self.assertTrue(np.isclose(sigma, test_sigma).all())
 
     def test_get_mu_sigma_std(self):
         # Get the test data
@@ -104,9 +103,8 @@ class TestBeamfit(unittest.TestCase):
                                                                pixel_size, pixel_size_std)
 
         # Compare them
-        # TODO: fix test data
-        # self.assertTrue(np.isclose(mu_std, test_mu_std).all())
-        # self.assertTrue(np.isclose(sigma_std, test_sigma_std).all())
+        self.assertTrue(np.isclose(mu_std, test_mu_std).all())
+        self.assertTrue(np.isclose(sigma_std, test_sigma_std).all())
 
     def test_fit_supergaussian_bad_input(self):
         for obj in ["i", 0, 0.0, True, [], {}, np.zeros((1,)), np.zeros((0, 0))]:
