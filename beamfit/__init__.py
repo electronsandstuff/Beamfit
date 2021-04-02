@@ -8,3 +8,6 @@
 # Import everything from the module
 from . import tests
 from .beamfit import *
+from .fit_param_conversion import *
+from .plotting_and_output import *
+from .utils import *
