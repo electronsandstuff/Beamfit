@@ -25,6 +25,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.ndimage as ndimage
 import scipy.optimize as opt
+import scipy.integrate as integrate
+import scipy.ndimage as ndimage
 import scipy.special as special
 from gaussufunc import *
 
@@ -271,10 +273,10 @@ def fitjac_bounded(xdata, mux, muy, sxx, vxy, sdt, sn, a, o):
     h = hb_to_h(hb)
     return h_to_hb_grad(hb, np.array(supergaussian_grad(xdata[0], xdata[1], *h))).T
 
-
-def fit_scipy_curvefit(x, y, w, h0):
+def fit_scipy_curvefit(x, y, w, h0, maxfev):
     # Call scipy's curve_fit
-    h, C = opt.curve_fit(fitfun_bounded, x, y, h_to_hb(h0), 1 / np.sqrt(w), absolute_sigma=True, jac=fitjac_bounded)
+    h, C = opt.curve_fit(fitfun_bounded, x, y, h_to_hb(h0), 1/np.sqrt(w), absolute_sigma=True, jac=fitjac_bounded,
+                         maxfev=maxfev)
 
     return hb_to_h(h), C
 
@@ -319,9 +321,18 @@ def fit_stochastic_LMA(x, y, w, h0, LMA_lambda=1, nbatch=8, epochs=4):
     # Return the parameters and the variance covariance matrix
     return hb_to_h(hb), C
 
-
-def fit_supergaussian(image, image_weights=None, prediction_func="2D_linear_Gaussian", sigma_threshold=3,
-                      sigma_threshold_guess=1, smoothing=5):
+def fit_supergaussian(image, image_weights=None, prediction_func="2D_linear_Gaussian", sigma_threshold=3, sigma_threshold_guess=1,
+                      nbatch=8, epochs=4, smoothing=5, LMA_lambda=1, maxfev=100):
+    # Double check the input
+    if not isinstance(image, (list, np.ndarray)):
+        raise ValueError(f"Image provided to supergaussian fit must be numpy compatible not the received type:"
+                         f" \"{type(image)}\"")
+    if isinstance(image, list):
+        image = np.array(image)
+    if len(image.shape) != 2:
+        raise ValueError(f"Image array provided to superagussian fit must have dimension 2, not {len(image.shape)}")
+    if image.size == 0:
+        raise ValueError(f"Image array provided to superagussian fit must contain more than zero pixels")
     # Calculate the threshold
     threshold = np.exp(-1 * sigma_threshold ** 2 / 2)
 
@@ -346,6 +357,7 @@ def fit_supergaussian(image, image_weights=None, prediction_func="2D_linear_Gaus
         raise ValueError("Unrecognized prediction method \"{:s}\"".format(prediction_func))
 
     # Get the Y data
+    #image_unwrapped = ndimage.median_filter(image, size=2).ravel()
     image_unwrapped = image.ravel()
 
     # Create a mask based on a threshold and a the actual mask
@@ -374,7 +386,7 @@ def fit_supergaussian(image, image_weights=None, prediction_func="2D_linear_Gaus
     x = MN[:, mask_combined]
 
     # Fit it
-    h, C = fit_scipy_curvefit(x, y, w, h0)
+    h, C = fit_scipy_curvefit(x, y, w, h0, maxfev=maxfev)
 
     # Return the fit and the covariance variance matrix
     return h, C
