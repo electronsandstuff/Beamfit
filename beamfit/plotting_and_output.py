@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.ndimage as ndimage
-from beamfit.gaussufunc import *
+from gaussufunc import *
 
 from .fit_param_conversion import get_mu_sigma_std, get_mu_sigma
 
