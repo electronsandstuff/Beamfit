@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import special, optimize as opt
 
 
 def fit_gaussian_linear_least_squares(image, sigma_threshold=2, plot=False):
@@ -11,7 +12,7 @@ def fit_gaussian_linear_least_squares(image, sigma_threshold=2, plot=False):
     threshold = np.exp(-1 * sigma_threshold)
 
     # If there isn't a mask, make one
-    if (not np.ma.isMaskedArray(image)):
+    if not np.ma.isMaskedArray(image):
         image = np.ma.array(image)
 
     # Force the images to be non-zero
