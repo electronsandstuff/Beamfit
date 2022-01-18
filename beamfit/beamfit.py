@@ -34,12 +34,6 @@ from .utils import chunk_it
 from .initial_parameter_estimation import fit_gaussian_linear_least_squares, fit_gaussian_1d
 
 
-# Wrapper functions
-fit_func = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: supergaussian(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n,
-                                                                         a, o)
-fit_func_jac = lambda xdata, mux, muy, vxx, vxy, vyy, n, a, o: np.array(
-    supergaussian_grad(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)).T
-
 def fit_func(xdata, mux, muy, vxx, vxy, vyy, n, a, o):
     return supergaussian(xdata[0], xdata[1], mux, muy, vxx, vxy, vyy, n, a, o)
 
@@ -49,6 +43,7 @@ def fit_func_jac(xdata, mux, muy, vxx, vxy, vyy, n, a, o):
 
 
 # Functions to convert from bounded parameters to parameters for unbounded optimization
+# TODO: add different options of this conversion: log
 def h_to_hb(h):
     return np.array([
         h[0],
