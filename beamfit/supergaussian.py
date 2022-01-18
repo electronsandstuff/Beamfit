@@ -1,37 +1,11 @@
-#!/usr/bin/env python
-
-'''
-BeamFit - Robust laser and charged particle beam image analysis
-Copyright (C) 2020 Christopher M. Pierce (contact@chris-pierce.com)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
-
-import matplotlib.pyplot as plt
-################################################################################
-# Imports
-################################################################################
 import numpy as np
-import scipy.ndimage as ndimage
 import scipy.optimize as opt
-import scipy.integrate as integrate
 import scipy.ndimage as ndimage
-import scipy.special as special
-import matplotlib.pyplot as plt
-from gaussufunc import *
+
+from gaussufunc import supergaussian, supergaussian_grad
 from .utils import chunk_it
-from .initial_parameter_estimation import fit_gaussian_linear_least_squares, fit_gaussian_1d
+from .gaussian_linear_least_squares import fit_gaussian_linear_least_squares
+from .gaussian_fit_1d import fit_gaussian_1d
 
 
 def fit_func(xdata, mux, muy, vxx, vxy, vyy, n, a, o):
