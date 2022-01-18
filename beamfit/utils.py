@@ -19,3 +19,9 @@ def chunk_it(seq, num):
         last += avg
 
     return out
+
+
+class AnalysisMethod:
+    def get_name(self):
+        raise NotImplementedError
+    
