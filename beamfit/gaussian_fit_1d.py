@@ -35,8 +35,8 @@ class GaussianProfile1D(AnalysisMethod):
 
         # Calculate scaling values for x/y for amplitude. This is required since gaussian can clip on the edge of the
         # image meaning the integral involves the error function
-        sx, sy = [2/(special.erf((s-f[0])/f[1]/np.sqrt(2)) - special.erf(-f[0]/f[1]/np.sqrt(2)))/(f[1]*np.sqrt(2*np.pi))
-                  for s, f in zip(reversed(image.shape), fits)]
+        sy, sx = [2/(special.erf((s-f[0])/f[1]/np.sqrt(2)) - special.erf(-f[0]/f[1]/np.sqrt(2)))/(f[1]*np.sqrt(2*np.pi))
+                  for s, f in zip(image.shape, reversed(fits))]
 
         # Return it
         return SuperGaussianResult(
