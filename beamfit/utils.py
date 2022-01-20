@@ -26,6 +26,9 @@ class AnalysisMethod:
     def get_name(self):
         raise NotImplementedError
 
+    def fit(self, image):
+        raise NotImplementedError
+
 
 class AnalysisResult:
     def get_mean(self):
@@ -36,12 +39,12 @@ class AnalysisResult:
 
 
 class SuperGaussianResult:
-    def __init__(self):
-        self.mu = np.zeros(2)
-        self.sigma = np.identity(2)
-        self.a = 1.0  # Amplitude
-        self.o = 0.0  # Background offset
-        self.n = 1.0  # Supergaussian parameter
+    def __init__(self, mu=np.zeros(2), sigma=np.identity(2), a=1.0, o=0.0, n=1.0):
+        self.mu = mu  # Centroid
+        self.sigma = sigma  # Variance-covariance matrix
+        self.a = a  # Amplitude
+        self.o = o  # Background offset
+        self.n = n  # Supergaussian parameter
 
     @property
     def h(self):
@@ -55,7 +58,7 @@ class SuperGaussianResult:
 
     @h.setter
     def h(self, h):
-        self.mu = np.array(h[0], h[1])
+        self.mu = np.array([h[0], h[1]])
         self.sigma = np.array([[h[2], h[3]], [h[3], h[4]]])
         self.n = h[5]
         self.a = h[6]
