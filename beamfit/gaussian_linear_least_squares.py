@@ -13,14 +13,15 @@ class GaussianLinearLeastSquares(AnalysisMethod):
         image_norm = ((image - lo)/(hi - lo) + np.exp(-10))/(1 + np.exp(-10))
 
         # Create coefficient matrices for fit
-        M, N = np.mgrid[:image_norm.shape[0], :image_norm.shape[1]]
-        mm = M[~image_norm.mask]
-        nn = N[~image_norm.mask]
+        m, n = np.mgrid[:image_norm.shape[0], :image_norm.shape[1]]
+        mm = m[~image_norm.mask]
+        nn = n[~image_norm.mask]
         x = np.array([np.ones_like(mm), mm, mm ** 2, nn, nn * mm, nn ** 2]).T
-        y = np.log(image_norm[~image_norm.mask])
+        expy = image_norm[~image_norm.mask]
+        y = np.log(expy)
 
         # Weight the values assuming equal error in the image pixels (we transform by log(y))
-        w = np.exp(y)**2  # 1/sigma**2
+        w = expy**2  # 1/sigma**2
         wy = y*w
         wx = x*w[:, None]
 
