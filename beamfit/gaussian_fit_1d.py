@@ -4,10 +4,10 @@ from .utils import AnalysisMethod, SuperGaussianResult
 
 
 class GaussianProfile1D(AnalysisMethod):
-    def __init__(self):
-        pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    def fit(self, image):
+    def __fit__(self, image):
         """
         Integrates the image across each axis and fits a Gaussian function with offset to each axis.  Predicts the 2D
         Gaussian of best fit from the resulting data.
@@ -50,6 +50,5 @@ class GaussianProfile1D(AnalysisMethod):
         return 'GaussianProfile1D'
 
 
-def fit_gaussian_1d(image):
-    """This function is for backwards compatibility"""
+def fit_gaussian_1d(image):  # Backwards compatibility
     return GaussianProfile1D().fit(image).h

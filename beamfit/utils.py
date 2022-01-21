@@ -23,10 +23,20 @@ def chunk_it(seq, num):
 
 
 class AnalysisMethod:
+    def __init__(self, sigma_threshold=None):
+        self.sigma_threshold = sigma_threshold
+
     def get_name(self):
         raise NotImplementedError
 
     def fit(self, image):
+        if not np.ma.isMaskedArray(image):  # Make a mask if there isn't one
+            image = np.ma.array(image)
+        if self.sigma_threshold is not None:
+            image.mask = np.bitwise_and(image.mask, image < image.max() * np.exp(-self.sigma_threshold))
+        return self.__fit__(image)
+
+    def __fit__(self, image):
         raise NotImplementedError
 
 
