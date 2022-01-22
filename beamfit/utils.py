@@ -10,18 +10,6 @@ def get_image_and_weight(raw_images, dark_fields, mask):
     return image, image_weight
 
 
-def chunk_it(seq, num):
-    avg = len(seq) / float(num)
-    out = []
-    last = 0.0
-
-    while last < len(seq):
-        out.append(seq[int(last):int(last + avg)])
-        last += avg
-
-    return out
-
-
 class AnalysisMethod:
     def __init__(self, sigma_threshold=None):
         self.sigma_threshold = sigma_threshold
