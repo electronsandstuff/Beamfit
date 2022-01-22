@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import special, optimize as opt
+
 from .utils import AnalysisMethod, SuperGaussianResult
 
 

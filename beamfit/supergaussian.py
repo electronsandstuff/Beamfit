@@ -1,9 +1,9 @@
 import numpy as np
 import scipy.optimize as opt
-
 from gaussufunc import supergaussian, supergaussian_grad
-from .utils import AnalysisMethod, SuperGaussianResult
+
 from . import factory
+from .utils import AnalysisMethod, SuperGaussianResult
 
 
 def h_to_hb(h):
