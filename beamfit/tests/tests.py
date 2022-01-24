@@ -133,3 +133,18 @@ class TestBeamfit(unittest.TestCase):
 
             # Compare them
             self.assertTrue(np.isclose(h_ref, h_test).all())
+
+
+class TestSigmaParameterization(unittest.TestCase):
+    def setUp(self):
+        self.matrices = [
+            np.identity(2),
+            np.array([[1, 2], [2, 5]]),
+            np.array([[100, 1], [1, 0.1]]),
+        ]
+
+    def test_inverses(self):
+        """Make sure all parameterizations have a valid inverse"""
+        for p in [beamfit.Cholesky(), beamfit.LogCholesky(), beamfit.Spherical()]:
+            for m in self.matrices:
+                np.testing.assert_allclose(p.reverse(p.forward(m)), m, atol=1e-15)

@@ -6,6 +6,20 @@ from . import factory
 from .utils import AnalysisMethod, SuperGaussianResult
 
 
+class SigmaTrans:
+    def __init__(self):
+        pass
+
+    def forward(self, h):
+        raise NotImplementedError
+
+    def reverse(self, h):
+        raise NotImplementedError
+
+    def forward_grad(self, h, grad):
+        raise NotImplementedError
+
+
 def h_to_hb(h):
     return np.array([
         h[0],
