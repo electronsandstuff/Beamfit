@@ -142,9 +142,19 @@ class TestSigmaParameterization(unittest.TestCase):
             np.array([[1, 2], [2, 5]]),
             np.array([[100, 1], [1, 0.1]]),
         ]
+        self.m = np.array([[1, 1], [1, 5]])  # Example from paper I am following
 
     def test_inverses(self):
         """Make sure all parameterizations have a valid inverse"""
         for p in [beamfit.Cholesky(), beamfit.LogCholesky(), beamfit.Spherical()]:
             for m in self.matrices:
                 np.testing.assert_allclose(p.reverse(p.forward(m)), m, atol=1e-15)
+
+    def test_cholesky(self):
+        np.testing.assert_allclose(beamfit.Cholesky().forward(self.m), np.array([1, 1, 2]))
+
+    def test_log_cholesky(self):
+        np.testing.assert_allclose(beamfit.LogCholesky().forward(self.m), np.array([0, 1, np.log(2)]))
+
+    def test_spherical(self):
+        np.testing.assert_allclose(beamfit.Spherical().forward(self.m), np.array([0, np.log(5)/2, -0.608]), rtol=1e-3)
