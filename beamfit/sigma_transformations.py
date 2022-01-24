@@ -4,6 +4,23 @@ Parameterizations for Variance-Covariance Matrices. Statistics and Computing, 6,
 """
 import numpy as np
 
+
+def eigen2d(s):
+    if np.isclose(s[0, 1], 0.0):
+        return np.identity(2), np.diag(s)
+    delta = np.sqrt(4 * s[0, 1] ** 2 + (s[0, 0] - s[1, 1]) ** 2)
+    lmbda = np.array([(s[0, 0] + s[1, 1] - delta) / 2, (s[0, 0] + s[1, 1] + delta) / 2])
+    u = np.array([[(lmbda[0] - s[1, 1]) / s[0, 1], (lmbda[1] - s[1, 1]) / s[0, 1]], [1, 1]])
+    u[:, 0] /= np.sqrt(u[0, 0] ** 2 + u[1, 0] ** 2)
+    u[:, 1] /= np.sqrt(u[0, 1] ** 2 + u[1, 1] ** 2)
+    return u, lmbda
+
+
+def a_to_theta(a):
+    b = np.exp(a)
+    return np.pi * b / (1 + b)
+
+
 class SigmaParameterization:
     def forward(self, s):
         """
@@ -58,26 +75,28 @@ class Spherical(SigmaParameterization):
         return np.array([np.log(st[0]), np.log(st[1]**2 + st[2]**2)/2, np.log(theta/(np.pi - theta))])
 
     def reverse(self, st):
-        a = np.exp(st[2])
-        theta = np.pi*a/(1+a)
+        theta = a_to_theta(st[2])
         return self.ch.reverse(np.array([np.exp(st[0]), np.cos(theta)*np.exp(st[1]), np.sin(theta)*np.exp(st[1])]))
 
 
 class MatrixLogarithm(SigmaParameterization):
-    def eigen(self, s):
-        if np.isclose(s[0, 1], 0.0):
-            return np.identity(2), np.diag(s)
-        delta = np.sqrt(4*s[0, 1]**2 + (s[0, 0]-s[1, 1])**2)
-        lmbda = np.array([(s[0, 0] + s[1, 1] - delta)/2,(s[0, 0] + s[1, 1] + delta)/2])
-        u = np.array([[(lmbda[1] - s[1, 1])/s[0, 1], (lmbda[0] - s[1, 1])/s[0, 1]], [1, 1]])
-        u[:, 0] /= np.sqrt(u[0, 0]**2 + u[1, 0]**2)
-        u[:, 1] /= np.sqrt(u[0, 1]**2 + u[1, 1]**2)
-        return u, lmbda
-
     def forward(self, s):
-        u, v = self.eigen(s)
+        u, v = eigen2d(s)
         return (u @ np.diag(np.log(v)) @ u.T)[np.triu_indices(2)]
 
     def reverse(self, st):
-        u, v = self.eigen(np.array([[st[0], st[1]], [st[1], st[2]]]))
+        u, v = eigen2d(np.array([[st[0], st[1]], [st[1], st[2]]]))
         return u @ np.diag(np.exp(v)) @ u.T
+
+
+class Givens(SigmaParameterization):
+    def forward(self, s):
+        u, v = eigen2d(s)
+        theta = np.arccos(u[0, 0])
+        return np.array([np.log(v[0]), np.log(v[1] - v[0]), np.log(theta/(np.pi - theta))])
+
+    def reverse(self, st):
+        theta = a_to_theta(st[2])
+        u = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+        v = [np.exp(st[0]), np.exp(st[0]) + np.exp(st[1])]
+        return u @ np.diag(v) @ u.T
