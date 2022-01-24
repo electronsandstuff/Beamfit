@@ -61,3 +61,23 @@ class Spherical(SigmaParameterization):
         a = np.exp(st[2])
         theta = np.pi*a/(1+a)
         return self.ch.reverse(np.array([np.exp(st[0]), np.cos(theta)*np.exp(st[1]), np.sin(theta)*np.exp(st[1])]))
+
+
+class MatrixLogarithm(SigmaParameterization):
+    def eigen(self, s):
+        if np.isclose(s[0, 1], 0.0):
+            return np.identity(2), np.diag(s)
+        delta = np.sqrt(4*s[0, 1]**2 + (s[0, 0]-s[1, 1])**2)
+        lmbda = np.array([(s[0, 0] + s[1, 1] - delta)/2,(s[0, 0] + s[1, 1] + delta)/2])
+        u = np.array([[(lmbda[1] - s[1, 1])/s[0, 1], (lmbda[0] - s[1, 1])/s[0, 1]], [1, 1]])
+        u[:, 0] /= np.sqrt(u[0, 0]**2 + u[1, 0]**2)
+        u[:, 1] /= np.sqrt(u[0, 1]**2 + u[1, 1]**2)
+        return u, lmbda
+
+    def forward(self, s):
+        u, v = self.eigen(s)
+        return (u @ np.diag(np.log(v)) @ u.T)[np.triu_indices(2)]
+
+    def reverse(self, st):
+        u, v = self.eigen(np.array([[st[0], st[1]], [st[1], st[2]]]))
+        return u @ np.diag(np.exp(v)) @ u.T

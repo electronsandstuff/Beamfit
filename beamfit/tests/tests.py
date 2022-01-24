@@ -146,7 +146,7 @@ class TestSigmaParameterization(unittest.TestCase):
 
     def test_inverses(self):
         """Make sure all parameterizations have a valid inverse"""
-        for p in [beamfit.Cholesky(), beamfit.LogCholesky(), beamfit.Spherical()]:
+        for p in [beamfit.Cholesky(), beamfit.LogCholesky(), beamfit.Spherical(), beamfit.MatrixLogarithm()]:
             for m in self.matrices:
                 np.testing.assert_allclose(p.reverse(p.forward(m)), m, atol=1e-15)
 
@@ -158,3 +158,7 @@ class TestSigmaParameterization(unittest.TestCase):
 
     def test_spherical(self):
         np.testing.assert_allclose(beamfit.Spherical().forward(self.m), np.array([0, np.log(5)/2, -0.608]), rtol=1e-3)
+
+    def test_matrix_logarithm(self):
+        np.testing.assert_allclose(beamfit.MatrixLogarithm().forward(self.m), np.array([1.554, -0.431, -0.168]),
+                                   rtol=1e-2)
