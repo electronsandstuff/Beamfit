@@ -114,10 +114,9 @@ class TestBeamfit(unittest.TestCase):
         np.testing.assert_allclose(mu_test, mu_ref)
         np.testing.assert_allclose(sigma_test, sigma_ref, atol=1e-11)
 
-    def test_fit_gaussian_1d(self):
-        # Make a list of functions to check
+    def internal_gaussian_test(self, p):
         h_refs = [
-            np.array([128, 256, 128**2, 0.0, 8**2, 1, 1.0, 0.06]),
+            np.array([128, 256, 32**2, 0.0, 8**2, 1, 1.0, 0.06]),
             np.array([115, 345, 32 ** 2, 0.0, 16 ** 2, 1, 10.0, 0.15]),
             np.array([132, 375, 16 ** 2, 0.0, 16 ** 2, 1, 432.0, -23]),
             np.array([142, 128, 25 ** 2, 0.0, 19 ** 2, 1, 253.0, 432]),
@@ -127,12 +126,16 @@ class TestBeamfit(unittest.TestCase):
             # Generate the image
             X, Y = np.mgrid[:256, :512]
             sg = beamfit.supergaussian(X, Y, *h_ref)
+            np.testing.assert_allclose(p.fit(sg).h, h_ref, rtol=0.005, atol=1e-10)
 
-            # Run the parameter estimation
-            h_test = beamfit.fit_gaussian_1d(sg)
+    def test_gaussian_profile_1d(self):
+        self.internal_gaussian_test(beamfit.GaussianProfile1D())
 
-            # Compare them
-            np.testing.assert_allclose(h_test, h_ref, rtol=1e-5)
+    def test_gaussian_linear_least_squares(self):
+        self.internal_gaussian_test(beamfit.GaussianLinearLeastSquares())
+
+    def test_rms_integration(self):
+        self.internal_gaussian_test(beamfit.RMSIntegration())
 
 
 class TestSigmaParameterization(unittest.TestCase):

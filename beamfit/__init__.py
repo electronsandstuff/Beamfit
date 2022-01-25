@@ -6,6 +6,7 @@ from .plotting_and_output import pretty_print_loc_and_size, plot_threshold, plot
 from .supergaussian import fit_supergaussian, SuperGaussian
 from .utils import get_image_and_weight
 from .sigma_transformations import Cholesky, LogCholesky, Spherical, MatrixLogarithm, Givens
+from .rms_integration import RMSIntegration
 from gaussufunc import supergaussian
 
 for o in [GaussianProfile1D, GaussianLinearLeastSquares, SuperGaussian]:  # Register all analysis methods to the factory
