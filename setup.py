@@ -38,7 +38,7 @@ ext_modules = [setuptools.Extension('gaussufunc', sources=['src/gaussian.c'],)]
 # Write out the pacakge metadata
 metadata = dict(
         name='beamfit',
-        version='1.2',
+        version='1.3',
         description='Robust laser and charged particle beam image analysis',
         author='Christopher M. Pierce',
         author_email='contact@chris-pierce.com',
