@@ -69,11 +69,11 @@ class TestBeamfit(unittest.TestCase):
 
         # Fit it and Compare
         test_h, test_C = beamfit.fit_supergaussian(test_image)
-        np.testing.assert_allclose(test_h, valid_h, rtol=1e-1)
+        np.testing.assert_allclose(test_h, valid_h, rtol=0.2)
 
         # Do it again with the other prediction methods
         test_h, test_C = beamfit.fit_supergaussian(test_image, prediction_func="1D_Gaussian")
-        np.testing.assert_allclose(test_h, valid_h, rtol=1e-1)
+        np.testing.assert_allclose(test_h, valid_h, rtol=0.2)
 
     def test_supergaussian(self):
         # Pull out the test data

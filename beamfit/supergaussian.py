@@ -34,8 +34,8 @@ class SuperGaussian(AnalysisMethod):
         self.sig_param = factory.create('sig_param', sig_param, **sig_param_args)
 
     def __fit__(self, image):
-        # Find an initial guess of the parameters with a fast method
-        h0 = self.predfun.fit(image).h
+        lo, hi = image.min(), image.max()  # Normalize image
+        image = (image - lo)/(hi - lo)
 
         # Get the x and y data for the fit
         m, n = np.mgrid[:image.shape[0], :image.shape[1]]
@@ -90,7 +90,8 @@ class SuperGaussian(AnalysisMethod):
             jacg = np.array(supergaussian_grad(xdata[0], xdata[1], *theta_to_h(theta))).T
             return jacg @ jacf  # Chain rule
 
-        theta_opt, _ = opt.curve_fit(fitfun, x, y, h_to_theta(h0), jac=fitfun_grad, maxfev=self.maxfev)
+        theta_opt, _ = opt.curve_fit(fitfun, x, y, h_to_theta(self.predfun.fit(image).h), jac=fitfun_grad,
+                                     maxfev=self.maxfev)
         h_opt = theta_to_h(theta_opt)
 
         # Return the fit and the covariance variance matrix
@@ -98,8 +99,8 @@ class SuperGaussian(AnalysisMethod):
             mu=np.array([h_opt[0], h_opt[1]]),
             sigma=np.array([[h_opt[2], h_opt[3]], [h_opt[3], h_opt[4]]]),
             n=h_opt[5],
-            a=h_opt[6],
-            o=h_opt[7]
+            a=h_opt[6]*(hi - lo),
+            o=h_opt[7] + lo
         )
 
 

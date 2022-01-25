@@ -9,8 +9,7 @@ class GaussianLinearLeastSquares(AnalysisMethod):
 
     def __fit__(self, image):
         # Normalize image z axis
-        hi = image.max()
-        lo = image.min()
+        lo, hi = image.min(), image.max()
         image_norm = ((image - lo)/(hi - lo) + np.exp(-10))/(1 + np.exp(-10))
 
         # Create coefficient matrices for fit
