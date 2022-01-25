@@ -149,7 +149,11 @@ class TestSigmaParameterization(unittest.TestCase):
         for p in [beamfit.Cholesky(), beamfit.LogCholesky(), beamfit.Spherical(), beamfit.MatrixLogarithm(),
                   beamfit.Givens()]:
             for m in self.matrices:
-                np.testing.assert_allclose(p.reverse(p.forward(m)), m, atol=1e-15)
+                try:
+                    np.testing.assert_allclose(p.reverse(p.forward(m)), m, atol=1e-15)
+                except:
+                    print(f'Failed at {p}')
+                    raise
 
     def test_cholesky(self):
         np.testing.assert_allclose(beamfit.Cholesky().forward(self.m), np.array([1, 1, 2]))

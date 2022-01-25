@@ -6,14 +6,22 @@ import numpy as np
 
 
 def eigen2d(s):
-    if np.isclose(s[0, 1], 0.0):
-        return np.identity(2), np.diag(s)
-    delta = np.sqrt(4 * s[0, 1] ** 2 + (s[0, 0] - s[1, 1]) ** 2)
-    lmbda = np.array([(s[0, 0] + s[1, 1] - delta) / 2, (s[0, 0] + s[1, 1] + delta) / 2])
-    u = np.array([[(lmbda[0] - s[1, 1]) / s[0, 1], (lmbda[1] - s[1, 1]) / s[0, 1]], [1, 1]])
-    u[:, 0] /= np.sqrt(u[0, 0] ** 2 + u[1, 0] ** 2)
-    u[:, 1] /= np.sqrt(u[0, 1] ** 2 + u[1, 1] ** 2)
-    return u, lmbda
+    if np.isclose(s[1], 0.0):
+        return 0, min(s[::2]), max(s[::2])
+
+    delta = np.sqrt(4 * s[1] ** 2 + (s[0] - s[2]) ** 2)
+    lmbda1 = (s[0] + s[2] - delta)/2
+    lmbda2 = (s[0] + s[2] + delta)/2
+
+    a = (lmbda1 - s[2]) / s[1]
+    theta = np.arccos(a / np.sqrt(1 + a**2))
+
+    return np.array([theta, lmbda1, lmbda2])
+
+
+def rot_mat_2d(theta):
+    c, s = np.cos(theta), np.sin(theta)
+    return np.array([[c, s], [-s, c]])
 
 
 def a_to_theta(a):
@@ -97,19 +105,20 @@ class Spherical(SigmaParameterization):
 
 class MatrixLogarithm(SigmaParameterization):
     def forward(self, s):
-        u, v = eigen2d(s)
-        return (u @ np.diag(np.log(v)) @ u.T)[np.triu_indices(2)]
+        theta, v1, v2 = eigen2d([s[0, 0], s[0, 1], s[1, 1]])
+        u = rot_mat_2d(theta)
+        return (u @ np.diag(np.log([v1, v2])) @ u.T)[np.triu_indices(2)]
 
     def reverse(self, st):
-        u, v = eigen2d(np.array([[st[0], st[1]], [st[1], st[2]]]))
-        return u @ np.diag(np.exp(v)) @ u.T
+        theta, v1, v2 = eigen2d(st)
+        u = rot_mat_2d(theta)
+        return u @ np.diag(np.exp([v1, v2])) @ u.T
 
 
 class Givens(SigmaParameterization):
     def forward(self, s):
-        u, v = eigen2d(s)
-        theta = np.arccos(u[0, 0])
-        return np.array([np.log(v[0]), np.log(v[1] - v[0]), np.log(theta/(np.pi - theta))])
+        theta, v1, v2 = eigen2d([s[0, 0], s[0, 1], s[1, 1]])
+        return np.array([np.log(v1), np.log(v2 - v1), np.log(theta/(np.pi - theta))])
 
     def reverse(self, st):
         theta = a_to_theta(st[2])
