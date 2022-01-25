@@ -155,6 +155,16 @@ class TestSigmaParameterization(unittest.TestCase):
                     print(f'Failed at {p}')
                     raise
 
+    def test_grads(self):
+        """just run the gradient functions"""
+        for p in [beamfit.Cholesky(), beamfit.LogCholesky(), beamfit.Spherical(), beamfit.MatrixLogarithm(),
+                  beamfit.Givens()]:
+            try:
+                p.reverse_grad([1, 2, 3])
+            except:
+                print(f'Failed at {p}')
+                raise
+
     def test_cholesky(self):
         np.testing.assert_allclose(beamfit.Cholesky().forward(self.m), np.array([1, 1, 2]))
 

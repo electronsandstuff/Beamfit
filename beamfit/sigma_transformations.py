@@ -19,6 +19,25 @@ def eigen2d(s):
     return np.array([theta, lmbda1, lmbda2])
 
 
+def eigen2d_grad(s, mindelta=1e-100):
+    delta = max(np.sqrt(4 * s[1] ** 2 + (s[0] - s[2]) ** 2), mindelta)
+
+    lmbda1 = (s[0] + s[2] - delta)/2
+    dlmbda1 = [(1 + (s[0] - s[2])/delta)/2, -2*s[1]/delta, (1 - (s[0] - s[2])/delta)/2]
+    dlmbda2 = [(1 - (s[0] - s[2])/delta)/2, 2*s[1]/delta, (1 + (s[0] - s[2])/delta)/2]
+
+    if np.isclose(s[1], 0):
+        dtheta = [0, 0, 0]
+    else:
+        da = np.array([dlmbda1[0] / s[1], (s[1] * dlmbda1[1] - lmbda1) / s[1] ** 2, (dlmbda1[2] - 1) / s[1]])
+        a = (lmbda1 - s[2]) / s[1]
+        x = a / np.sqrt(1 + a ** 2)
+        dx = da * (1 / np.sqrt(1 + a ** 2) - a ** 2 / np.sqrt(1 + a ** 2) ** 3)
+        dtheta = -dx/np.sqrt(1 + x**2)
+
+    return np.array([dtheta, dlmbda1, dlmbda2])
+
+
 def rot_mat_2d(theta):
     c, s = np.cos(theta), np.sin(theta)
     return np.array([[c, s], [-s, c]])
@@ -96,11 +115,17 @@ class Spherical(SigmaParameterization):
 
     def reverse_grad(self, st):
         theta = a_to_theta(st[2])
-        x = a_to_theta_grad(st[2])
-        jf = np.array([[np.exp(st[0]), 0, 0], [0, np.cos(theta)*np.exp(st[1]), -np.sin(theta)*x*np.exp(st[1])],
-                       [0, np.sin(theta)*np.exp(st[1]), np.cos(theta)*x*np.exp(st[1])]])
-        return self.ch.reverse_grad(
-            np.array([np.exp(st[0]), np.cos(theta)*np.exp(st[1]), np.sin(theta)*np.exp(st[1])])) @ jf
+        dtheta = a_to_theta_grad(st[2])
+        jf = np.array([
+            [np.exp(st[0]), 0, 0],
+            [0, np.cos(theta)*np.exp(st[1]), -np.sin(theta)*dtheta*np.exp(st[1])],
+            [0, np.sin(theta)*np.exp(st[1]), np.cos(theta)*dtheta*np.exp(st[1])]
+        ])
+        return self.ch.reverse_grad(np.array([
+            np.exp(st[0]),
+            np.cos(theta)*np.exp(st[1]),
+            np.sin(theta)*np.exp(st[1])
+        ])) @ jf
 
 
 class MatrixLogarithm(SigmaParameterization):
@@ -114,6 +139,25 @@ class MatrixLogarithm(SigmaParameterization):
         u = rot_mat_2d(theta)
         return u @ np.diag(np.exp([v1, v2])) @ u.T
 
+    def reverse_grad(self, st):
+        theta, v1, v2 = eigen2d(st)
+        dtheta, dv1, dv2 = eigen2d_grad(st)
+
+        u = rot_mat_2d(theta)
+        c, s = np.cos(theta), np.sin(theta)
+        du = np.array([[-c, s], [-s, -c]])[None, :, :] * dtheta[:, None, None]
+
+        x = np.diag(np.exp([v1, v2]))
+        dx = np.zeros((3, 2, 2))
+        dx[:, 0, 0] = np.exp(v1)*dv1
+        dx[:, 1, 1] = np.exp(v2)*dv2
+
+        dr = np.einsum('ijk,kl,ml->ijm', du, x, u)
+        dr += np.einsum('jk,ikl,ml->ijm', u, dx, u)
+        dr += np.einsum('jk,kl,iml->ijm', u, x, du)
+
+        return np.array([dr[:, 0, 0], dr[:, 0, 1], dr[:, 1, 1]])
+
 
 class Givens(SigmaParameterization):
     def forward(self, s):
@@ -121,7 +165,29 @@ class Givens(SigmaParameterization):
         return np.array([np.log(v1), np.log(v2 - v1), np.log(theta/(np.pi - theta))])
 
     def reverse(self, st):
-        theta = a_to_theta(st[2])
-        u = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+        u = rot_mat_2d(a_to_theta(st[2])).T
         v = [np.exp(st[0]), np.exp(st[0]) + np.exp(st[1])]
         return u @ np.diag(v) @ u.T
+
+    def reverse_grad(self, st):
+        theta = a_to_theta(st[2])
+        dtheta = a_to_theta_grad(st[2])
+
+        u = rot_mat_2d(theta)
+        c, s = np.cos(theta), np.sin(theta)
+        du = np.array([[-c, s], [-s, -c]])[None, :, :] * np.array([0, 0, dtheta])[:, None, None]
+
+        v = [np.exp(st[0]), np.exp(st[0]) + np.exp(st[1])]
+        dv1 = [np.exp(st[0]), 0, 0]
+        dv2 = [np.exp(st[0]), np.exp(st[1]), 0]
+
+        x = np.diag(v)
+        dx = np.zeros((3, 2, 2))
+        dx[:, 0, 0] = dv1
+        dx[:, 1, 1] = dv2
+
+        dr = np.einsum('ijk,kl,ml->ijm', du, x, u)
+        dr += np.einsum('jk,ikl,ml->ijm', u, dx, u)
+        dr += np.einsum('jk,kl,iml->ijm', u, x, du)
+
+        return np.array([dr[:, 0, 0], dr[:, 0, 1], dr[:, 1, 1]])
