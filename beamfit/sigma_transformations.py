@@ -21,6 +21,11 @@ def a_to_theta(a):
     return np.pi * b / (1 + b)
 
 
+def a_to_theta_grad(a):
+    b = np.exp(a)
+    return b*np.pi/(1+b) - b**2*np.pi/(1+b)**2
+
+
 class SigmaParameterization:
     def forward(self, s):
         """
@@ -34,11 +39,7 @@ class SigmaParameterization:
         """
         raise NotImplementedError
 
-    def forward_grad(self, s, grad):
-        """
-        Transforms the gradient of a function WRT the sigma matrix into the gradient WRT to the unconstrained
-        parameterization
-        """
+    def reverse_grad(self, st):
         raise NotImplementedError
 
 
@@ -52,6 +53,9 @@ class Cholesky(SigmaParameterization):
     def reverse(self, st):
         return np.array([[st[0]**2, st[0]*st[1]], [st[0]*st[1], st[1]**2 + st[2]**2]])
 
+    def reverse_grad(self, st):
+        return np.array([[2*st[0], 0, 0], [st[1], st[0], 0], [0, 2*st[1], 2*st[2]]])
+
 
 class LogCholesky(SigmaParameterization):
     def __init__(self):
@@ -63,6 +67,10 @@ class LogCholesky(SigmaParameterization):
 
     def reverse(self, st):
         return self.ch.reverse(np.array([np.exp(st[0]), st[1], np.exp(st[2])]))
+
+    def reverse_grad(self, st):
+        jf = np.array([[np.exp(st[0]), 0, 0], [0, 1, 0], [0, 0, np.exp(st[2])]])
+        return self.ch.reverse_grad(np.array([np.exp(st[0]), st[1], np.exp(st[2])])) @ jf
 
 
 class Spherical(SigmaParameterization):
@@ -77,6 +85,14 @@ class Spherical(SigmaParameterization):
     def reverse(self, st):
         theta = a_to_theta(st[2])
         return self.ch.reverse(np.array([np.exp(st[0]), np.cos(theta)*np.exp(st[1]), np.sin(theta)*np.exp(st[1])]))
+
+    def reverse_grad(self, st):
+        theta = a_to_theta(st[2])
+        x = a_to_theta_grad(st[2])
+        jf = np.array([[np.exp(st[0]), 0, 0], [0, np.cos(theta)*np.exp(st[1]), -np.sin(theta)*x*np.exp(st[1])],
+                       [0, np.sin(theta)*np.exp(st[1]), np.cos(theta)*x*np.exp(st[1])]])
+        return self.ch.reverse_grad(
+            np.array([np.exp(st[0]), np.cos(theta)*np.exp(st[1]), np.sin(theta)*np.exp(st[1])])) @ jf
 
 
 class MatrixLogarithm(SigmaParameterization):
