@@ -69,11 +69,11 @@ class TestBeamfit(unittest.TestCase):
 
         # Fit it and Compare
         test_h, test_C = beamfit.fit_supergaussian(test_image)
-        self.assertTrue(np.isclose(test_h, valid_h, rtol=1e-1).all())
+        np.testing.assert_allclose(test_h, valid_h, rtol=1e-1)
 
         # Do it again with the other prediction methods
         test_h, test_C = beamfit.fit_supergaussian(test_image, prediction_func="1D_Gaussian")
-        self.assertTrue(np.isclose(test_h, valid_h, rtol=1e-1).all())
+        np.testing.assert_allclose(test_h, valid_h, rtol=1e-1)
 
     def test_supergaussian(self):
         # Pull out the test data
@@ -86,7 +86,7 @@ class TestBeamfit(unittest.TestCase):
         test = gaussufunc.supergaussian(X, Y, *h)
 
         # Test it
-        self.assertTrue(np.isclose(valid, test).all())
+        np.testing.assert_allclose(test, valid)
 
     def test_supergaussian_grad(self):
         # Pull out the test data
@@ -100,7 +100,7 @@ class TestBeamfit(unittest.TestCase):
 
         # Test it
         for t, v in zip(valid, test):
-            self.assertTrue(np.isclose(v, t).all())
+            np.testing.assert_allclose(t, v)
 
     def test_get_mu_sigma(self):
         # Numerically find the reference values for the image
@@ -111,8 +111,8 @@ class TestBeamfit(unittest.TestCase):
         mu_test, sigma_test = beamfit.get_mu_sigma(h_test, 1.0)
 
         # Compare them
-        self.assertTrue(np.isclose(mu_ref, mu_test).all())
-        self.assertTrue(np.isclose(sigma_ref, sigma_test).all())
+        np.testing.assert_allclose(mu_test, mu_ref)
+        np.testing.assert_allclose(sigma_test, sigma_ref, atol=1e-11)
 
     def test_fit_gaussian_1d(self):
         # Make a list of functions to check
@@ -132,7 +132,7 @@ class TestBeamfit(unittest.TestCase):
             h_test = beamfit.fit_gaussian_1d(sg)
 
             # Compare them
-            self.assertTrue(np.isclose(h_ref, h_test).all())
+            np.testing.assert_allclose(h_test, h_ref, rtol=1e-5)
 
 
 class TestSigmaParameterization(unittest.TestCase):

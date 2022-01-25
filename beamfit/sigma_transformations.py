@@ -113,7 +113,7 @@ class Spherical(SigmaParameterization):
         theta = a_to_theta(st[2])
         return self.ch.reverse(np.array([np.exp(st[0]), np.cos(theta)*np.exp(st[1]), np.sin(theta)*np.exp(st[1])]))
 
-    def reverse_grad(self, st):
+    def reverse_grad(self, st):  # TODO: check this function
         theta = a_to_theta(st[2])
         dtheta = a_to_theta_grad(st[2])
         jf = np.array([
@@ -139,7 +139,7 @@ class MatrixLogarithm(SigmaParameterization):
         u = rot_mat_2d(theta)
         return u @ np.diag(np.exp([v1, v2])) @ u.T
 
-    def reverse_grad(self, st):
+    def reverse_grad(self, st):  # TODO: Check this function
         theta, v1, v2 = eigen2d(st)
         dtheta, dv1, dv2 = eigen2d_grad(st)
 
@@ -169,7 +169,7 @@ class Givens(SigmaParameterization):
         v = [np.exp(st[0]), np.exp(st[0]) + np.exp(st[1])]
         return u @ np.diag(v) @ u.T
 
-    def reverse_grad(self, st):
+    def reverse_grad(self, st):  # TODO: check this function
         theta = a_to_theta(st[2])
         dtheta = a_to_theta_grad(st[2])
 

@@ -20,85 +20,86 @@ class SigmaTrans:
         raise NotImplementedError
 
 
-def h_to_hb(h):
-    return np.array([
-        h[0],
-        h[1],
-        np.sqrt(h[2]),
-        h[3],
-        np.sqrt(h[2] * h[4] - h[3] ** 2),
-        np.sqrt(h[5]),
-        h[6],
-        h[7]
-    ])
-
-
-def h_to_hb_grad(hb, grad):
-    return np.array([
-        grad[0, :],
-        grad[1, :],
-        2 * hb[2] * grad[2, :] - ((2 * (hb[3] ** 2 + hb[4] ** 2)) / hb[2] ** 3) * grad[4, :],
-        grad[3, :] + (2 * hb[3]) / hb[2] ** 2 * grad[4, :],
-        (2 * hb[4]) / hb[2] ** 2 * grad[4, :],
-        2 * hb[5] * grad[5, :],
-        grad[6, :],
-        grad[7, :]
-    ])
-
-
-def hb_to_h(hb):
-    return np.array([
-        hb[0],
-        hb[1],
-        hb[2] ** 2,
-        hb[3],
-        (hb[3] ** 2 + hb[4] ** 2) / hb[2] ** 2,
-        hb[5] ** 2,
-        hb[6],
-        hb[7]
-    ])
-
-
-def fitfun_bounded(xdata, mux, muy, sxx, vxy, sdt, sn, a, o):
-    h = hb_to_h(np.array([mux, muy, sxx, vxy, sdt, sn, a, o]))
-    return supergaussian(xdata[0], xdata[1], *h)
-
-
-def fitjac_bounded(xdata, mux, muy, sxx, vxy, sdt, sn, a, o):
-    hb = np.array([mux, muy, sxx, vxy, sdt, sn, a, o])
-    h = hb_to_h(hb)
-    return h_to_hb_grad(hb, np.array(supergaussian_grad(xdata[0], xdata[1], *h))).T
-
-
 class SuperGaussian(AnalysisMethod):
-    def __init__(self, predfun="GaussianProfile1D", predfun_args=None, maxfev=100, **kwargs):
+    def __init__(self, predfun="GaussianProfile1D", predfun_args=None, sig_param='LogCholesky', sig_param_args=None,
+                 maxfev=100, **kwargs):
         super().__init__(**kwargs)
+        if sig_param_args is None:
+            sig_param_args = {}
         if predfun_args is None:
             predfun_args = {}
-        self.predfun = predfun
+        self.predfun = factory.create('analysis', predfun, **predfun_args)
         self.predfun_args = predfun_args
         self.maxfev = maxfev
+        self.sig_param = factory.create('sig_param', sig_param, **sig_param_args)
 
     def __fit__(self, image):
         # Find an initial guess of the parameters with a fast method
-        h0 = factory.create('analysis', self.predfun, **self.predfun_args).fit(image).h
+        h0 = self.predfun.fit(image).h
 
         # Get the x and y data for the fit
         m, n = np.mgrid[:image.shape[0], :image.shape[1]]
         x = np.vstack((m[~image.mask], n[~image.mask]))
         y = np.array(image[~image.mask])
 
-        # TODO: add different options for bounded parameter fit: log
-        hb, _ = opt.curve_fit(fitfun_bounded, x, y, h_to_hb(h0), jac=fitjac_bounded, maxfev=self.maxfev)
-        h = hb_to_h(hb)
+        # Setup the fitting functions
+        def h_to_theta(h):
+            # Break out the variables
+            mu = h[:2]
+            sigma = np.array([[h[2], h[3]], [h[3], h[4]]])
+            n = h[5]
+            a = h[6]
+            o = h[7]
+
+            # Transform parameters
+            st = self.sig_param.forward(sigma)  # The sigma parameterization
+            nt = np.log(n)  # n is positive
+            return np.array([mu[0], mu[1], st[0], st[1], st[2], nt, a, o])
+
+        def theta_to_h(theta):
+            # Break out the variables
+            mu = theta[:2]
+            st = theta[2:5]
+            nt = theta[5]
+            a = theta[6]
+            o = theta[7]
+
+            # Transform sigma and n back
+            sigma = self.sig_param.reverse(st)
+            n = np.exp(nt)
+            return np.array([mu[0], mu[1], sigma[0, 0], sigma[0, 1], sigma[1, 1], n, a, o])
+
+        def theta_to_h_grad(theta):
+            # Break out the parameters
+            st = theta[2:5]
+            nt = theta[5]
+
+            # Construct the jacobian
+            j = np.identity(8)
+            j[2:5, 2:5] = self.sig_param.reverse_grad(st)  # Add the sigma parameterization gradient
+            j[5, 5] = np.exp(nt)
+            return j
+
+        def fitfun(xdata, *theta):
+            return supergaussian(xdata[0], xdata[1], *theta_to_h(theta))
+
+        def fitfun_grad(xdata, *theta):
+            # TODO: I should really change supergaussian_grad's output to be the transpose of what it currently is
+            # TODO: this would make it line up with the convention for jacobian functions
+            jacf = theta_to_h_grad(theta)
+            jacg = np.array(supergaussian_grad(xdata[0], xdata[1], *theta_to_h(theta))).T
+            return jacg @ jacf  # Chain rule
+
+        theta_opt, _ = opt.curve_fit(fitfun, x, y, h_to_theta(h0), jac=fitfun_grad, maxfev=self.maxfev)
+        h_opt = theta_to_h(theta_opt)
 
         # Return the fit and the covariance variance matrix
         return SuperGaussianResult(
-            mu=np.array([h[0], h[1]]),
-            sigma=np.array([[h[2], h[3]], [h[3], h[4]]]),
-            n=h[5],
-            a=h[6],
-            o=h[7]
+            mu=np.array([h_opt[0], h_opt[1]]),
+            sigma=np.array([[h_opt[2], h_opt[3]], [h_opt[3], h_opt[4]]]),
+            n=h_opt[5],
+            a=h_opt[6],
+            o=h_opt[7]
         )
 
 
