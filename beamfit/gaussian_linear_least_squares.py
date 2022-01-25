@@ -41,9 +41,6 @@ class GaussianLinearLeastSquares(AnalysisMethod):
             o=lo,
         )
 
-    def get_name(self):
-        return 'GaussianLinearLeastSquares'
-
 
 def fit_gaussian_linear_least_squares(image, sigma_threshold=2, plot=False):  # Backwards compatibility
     return GaussianLinearLeastSquares(sigma_threshold=sigma_threshold).fit(image).h

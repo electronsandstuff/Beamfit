@@ -14,9 +14,6 @@ class AnalysisMethod:
     def __init__(self, sigma_threshold=None):
         self.sigma_threshold = sigma_threshold
 
-    def get_name(self):
-        raise NotImplementedError
-
     def fit(self, image):
         if not np.ma.isMaskedArray(image):  # Make a mask if there isn't one
             image = np.ma.array(image)

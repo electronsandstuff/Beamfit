@@ -47,9 +47,6 @@ class GaussianProfile1D(AnalysisMethod):
             o=(xfit[3]/image.shape[1] + yfit[3]/image.shape[0])/2
         )
 
-    def get_name(self):
-        return 'GaussianProfile1D'
-
 
 def fit_gaussian_1d(image):  # Backwards compatibility
     return GaussianProfile1D().fit(image).h

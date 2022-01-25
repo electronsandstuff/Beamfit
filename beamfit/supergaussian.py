@@ -79,12 +79,9 @@ class SuperGaussian(AnalysisMethod):
         self.predfun_args = predfun_args
         self.maxfev = maxfev
 
-    def get_name(self):
-        return 'SuperGaussian'
-
     def __fit__(self, image):
         # Find an initial guess of the parameters with a fast method
-        h0 = factory.create(self.predfun, **self.predfun_args).fit(image).h
+        h0 = factory.create('analysis', self.predfun, **self.predfun_args).fit(image).h
 
         # Get the x and y data for the fit
         m, n = np.mgrid[:image.shape[0], :image.shape[1]]

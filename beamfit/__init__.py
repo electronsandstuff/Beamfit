@@ -9,4 +9,7 @@ from .sigma_transformations import Cholesky, LogCholesky, Spherical, MatrixLogar
 from gaussufunc import supergaussian
 
 for o in [GaussianProfile1D, GaussianLinearLeastSquares, SuperGaussian]:  # Register all analysis methods to the factory
-    register(o().get_name(), o)
+    register('analysis', o.__name__, o)
+
+for o in [Cholesky, LogCholesky, Spherical, MatrixLogarithm, Givens]:  # Register the sigma parameterizations
+    register('sig_param', o.__name__, o)
