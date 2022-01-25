@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.ndimage as ndimage
-from gaussufunc import *
+from gaussufunc import supergaussian
 
 from .fit_param_conversion import get_mu_sigma_std, get_mu_sigma
 
@@ -26,9 +26,6 @@ def pretty_print_loc_and_size(h, C, pixel_size, pixel_size_std):
     print(' um')
 
 
-################################################################################
-# Fit plotting
-################################################################################
 def plot_residuals(image, h, sigma_threshold=2):
     # Calculate the threshold
     threshold = np.exp(-1 * sigma_threshold ** 2 / 2)
