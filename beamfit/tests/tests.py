@@ -143,7 +143,7 @@ class TestSigmaParameterization(unittest.TestCase):
             np.array([[100, 1], [1, 0.1]]),
         ]
         self.m = np.array([[1, 1], [1, 5]])  # Example from paper I am following
-        self.ps = [beamfit.Cholesky(), beamfit.LogCholesky(), beamfit.Spherical(), #beamfit.MatrixLogarithm(),
+        self.ps = [beamfit.Cholesky(), beamfit.LogCholesky(), beamfit.Spherical(), beamfit.MatrixLogarithm(),
                   beamfit.Givens()]
 
     def test_inverses(self):
@@ -155,15 +155,6 @@ class TestSigmaParameterization(unittest.TestCase):
                 except:
                     print(f'Failed at {p}')
                     raise
-
-    def test_grads(self):
-        """just run the gradient functions"""
-        for p in self.ps:
-            try:
-                p.reverse_grad([1, 2, 3])
-            except:
-                print(f'Failed at {p}')
-                raise
 
     def test_cholesky(self):
         np.testing.assert_allclose(beamfit.Cholesky().forward(self.m), np.array([1, 1, 2]))
@@ -191,6 +182,15 @@ class TestSigmaParameterization(unittest.TestCase):
             except:
                 print(f'Failed at {p}')
                 raise
+
+    def test_eigen2d_grad_numerical(self):
+        x0 = np.array([2, 3, 5])
+        def rev(s):
+            a = beamfit.eigen2d(s)
+            return np.array([[a[0], a[1]], [a[1], a[2]]])
+        j, err = calc_gradient_central_difference(rev, x0=x0, h=1e-4)
+        j_actual = beamfit.eigen2d_grad(x0)
+        np.testing.assert_allclose(j_actual, j, atol=1e-8, rtol=1e-5)
 
 
 def calc_gradient_central_difference(fn, x0=np.array([0, 0, 0]), h=1e-5, atol=1e-9):

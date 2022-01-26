@@ -23,17 +23,21 @@ def eigen2d_grad(s, mindelta=1e-100):
     delta = max(np.sqrt(4 * s[1] ** 2 + (s[0] - s[2]) ** 2), mindelta)
 
     lmbda1 = (s[0] + s[2] - delta)/2
-    dlmbda1 = [(1 + (s[0] - s[2])/delta)/2, -2*s[1]/delta, (1 - (s[0] - s[2])/delta)/2]
-    dlmbda2 = [(1 - (s[0] - s[2])/delta)/2, 2*s[1]/delta, (1 + (s[0] - s[2])/delta)/2]
+    dlmbda1 = [(1 - (s[0] - s[2])/delta)/2, -2*s[1]/delta, (1 + (s[0] - s[2])/delta)/2]
+    dlmbda2 = [(1 + (s[0] - s[2])/delta)/2, 2*s[1]/delta, (1 - (s[0] - s[2])/delta)/2]
 
     if np.isclose(s[1], 0):
         dtheta = [0, 0, 0]
     else:
-        da = np.array([dlmbda1[0] / s[1], (s[1] * dlmbda1[1] - lmbda1) / s[1] ** 2, (dlmbda1[2] - 1) / s[1]])
+        da = np.array([
+            dlmbda1[0] / s[1],
+            (s[1] * dlmbda1[1] - lmbda1) / s[1] ** 2 + s[2]/s[1]**2,
+            (dlmbda1[2] - 1) / s[1]
+        ])
         a = (lmbda1 - s[2]) / s[1]
         x = a / np.sqrt(1 + a ** 2)
-        dx = da * (1 / np.sqrt(1 + a ** 2) - a ** 2 / np.sqrt(1 + a ** 2) ** 3)
-        dtheta = -dx/np.sqrt(1 + x**2)
+        dx = (da*np.sqrt(1 + a ** 2) - a/np.sqrt(1 + a ** 2)*a*da)/(1 + a**2)
+        dtheta = -dx/np.sqrt(1 - x**2)
 
     return np.array([dtheta, dlmbda1, dlmbda2])
 
