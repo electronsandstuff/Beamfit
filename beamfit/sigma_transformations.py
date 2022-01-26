@@ -113,7 +113,7 @@ class Spherical(SigmaParameterization):
         theta = a_to_theta(st[2])
         return self.ch.reverse(np.array([np.exp(st[0]), np.cos(theta)*np.exp(st[1]), np.sin(theta)*np.exp(st[1])]))
 
-    def reverse_grad(self, st):  # TODO: check this function
+    def reverse_grad(self, st):
         theta = a_to_theta(st[2])
         dtheta = a_to_theta_grad(st[2])
         jf = np.array([
@@ -175,7 +175,7 @@ class Givens(SigmaParameterization):
 
         u = rot_mat_2d(theta)
         c, s = np.cos(theta), np.sin(theta)
-        du = np.array([[-c, s], [-s, -c]])[None, :, :] * np.array([0, 0, dtheta])[:, None, None]
+        du = np.array([[-s, c], [-c, -s]])[None, :, :] * np.array([0, 0, dtheta])[:, None, None]
 
         v = [np.exp(st[0]), np.exp(st[0]) + np.exp(st[1])]
         dv1 = [np.exp(st[0]), 0, 0]

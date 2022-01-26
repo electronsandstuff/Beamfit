@@ -21,7 +21,7 @@ class SigmaTrans:
 
 
 class SuperGaussian(AnalysisMethod):
-    def __init__(self, predfun="GaussianProfile1D", predfun_args=None, sig_param='Spherical', sig_param_args=None,
+    def __init__(self, predfun="GaussianProfile1D", predfun_args=None, sig_param='Givens', sig_param_args=None,
                  maxfev=100, **kwargs):
         super().__init__(**kwargs)
         if sig_param_args is None:
