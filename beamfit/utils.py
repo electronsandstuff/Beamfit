@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.special as special
+from . import factory
 
 
 def get_image_and_weight(raw_images, dark_fields, mask):
@@ -31,6 +32,14 @@ class AnalysisMethod:
 
     def __get_config_dict__(self):
         return {}
+
+
+def get_config_dict_analysis_method(m: AnalysisMethod):
+    return {'type': type(m).__name__, 'config': m.get_config_dict()}
+
+
+def create_analysis_method_from_dict(d):
+    return factory.create('analysis', d['type'], **d['config'])
 
 
 class AnalysisResult:
