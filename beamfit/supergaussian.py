@@ -91,9 +91,11 @@ class SuperGaussian(AnalysisMethod):
             jacg = np.array(supergaussian_grad(xdata[0], xdata[1], *theta_to_h(theta))).T
             return jacg @ jacf  # Chain rule
 
-        theta_opt, _ = opt.curve_fit(fitfun, x, y, h_to_theta(self.predfun.fit(image).h), jac=fitfun_grad,
+        theta_opt, theta_c = opt.curve_fit(fitfun, x, y, h_to_theta(self.predfun.fit(image).h), jac=fitfun_grad,
                                      maxfev=self.maxfev)
         h_opt = theta_to_h(theta_opt)
+        j = theta_to_h_grad(theta_opt)
+        h_c = j @ theta_c @ j.T
 
         # Return the fit and the covariance variance matrix
         return SuperGaussianResult(
@@ -101,7 +103,8 @@ class SuperGaussian(AnalysisMethod):
             sigma=np.array([[h_opt[2], h_opt[3]], [h_opt[3], h_opt[4]]]),
             n=h_opt[5],
             a=h_opt[6]*(hi - lo),
-            o=h_opt[7] + lo
+            o=h_opt[7] + lo,
+            c=h_c
         )
 
     def __get_config_dict__(self):

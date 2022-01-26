@@ -69,8 +69,11 @@ class TestBeamfit(unittest.TestCase):
         valid_C = self.test_data['supergaussian_fit_data']['labels'][0][1]
 
         # Fit it and Compare
-        test_h, test_C = beamfit.fit_supergaussian(test_image)
-        np.testing.assert_allclose(test_h, valid_h, rtol=0.2)
+        res = beamfit.SuperGaussian().fit(test_image)
+        #test_h, test_C = beamfit.fit_supergaussian(test_image)
+        np.testing.assert_allclose(res.h, valid_h, rtol=0.2)
+        print(res.get_covariance_matrix(), res.get_covariance_matrix_std())
+
 
     def test_supergaussian(self):
         # Pull out the test data

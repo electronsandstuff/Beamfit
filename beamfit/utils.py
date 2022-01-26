@@ -49,14 +49,21 @@ class AnalysisResult:
     def get_covariance_matrix(self):
         raise NotImplementedError
 
+    def get_mean_std(self):
+        return None
 
-class SuperGaussianResult:
-    def __init__(self, mu=np.zeros(2), sigma=np.identity(2), a=1.0, o=0.0, n=1.0):
+    def get_covariance_matrix_std(self):
+        return None
+
+
+class SuperGaussianResult(AnalysisResult):
+    def __init__(self, mu=np.zeros(2), sigma=np.identity(2), a=1.0, o=0.0, n=1.0, c=None):
         self.mu = mu  # Centroid
         self.sigma = sigma  # Variance-covariance matrix
         self.a = a  # Amplitude
         self.o = o  # Background offset
         self.n = n  # Supergaussian parameter
+        self.c = c  # covariance matrix of h
 
     @property
     def h(self):
@@ -79,6 +86,34 @@ class SuperGaussianResult:
     def get_mean(self):
         return self.mu
 
+    def sigma_scaling_factor(self):
+        return special.gamma((2 + self.n) / self.n) / 2 / special.gamma(1 + 1 / self.n)
+
+    def sigma_scaling_factor_grad(self):
+        n = self.n
+        scaling_factor_deriv = special.gamma((2 + n)/n)/2/n**2*special.polygamma(0, 1 + 1/n)
+        scaling_factor_deriv += (1/n - (2 + n)/n**2)*special.gamma((2 + n)/n)*special.polygamma(0, (2 + n)/n)/2
+        scaling_factor_deriv /= special.gamma(1 + 1 / n)
+        return scaling_factor_deriv
+
     def get_covariance_matrix(self):
-        scaling_factor = special.gamma((2 + self.n) / self.n) / 2 / special.gamma(1 + 1 / self.n)
-        return self.sigma * scaling_factor
+        return self.sigma * self.sigma_scaling_factor()
+
+    def get_mean_std(self):
+        return np.sqrt(np.array([self.c[0, 0], self.c[1, 1]]))
+
+    def get_covariance_matrix_std(self):
+        # Find the Jacobian of the scaling transformation
+        scaling_j = np.identity(4)
+        scaling_j[:3, :3] *= self.sigma_scaling_factor()
+        scaling_j[:3, 3] = self.h[2:5] * self.sigma_scaling_factor_grad()
+
+        # Get the covariance matrix of our variables
+        sigma_n_cov = self.c[2:6, 2:6]
+
+        # Transform it
+        sigma_n_cov_scaled = scaling_j @ sigma_n_cov @ scaling_j.T
+        return np.sqrt(np.array([
+            [sigma_n_cov_scaled[0, 0], sigma_n_cov_scaled[1, 1]],
+            [sigma_n_cov_scaled[1, 1], sigma_n_cov_scaled[2, 2]]
+        ]))
