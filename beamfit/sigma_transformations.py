@@ -136,29 +136,29 @@ class MatrixLogarithm(SigmaParameterization):
     def forward(self, s):
         theta, v1, v2 = eigen2d([s[0, 0], s[0, 1], s[1, 1]])
         u = rot_mat_2d(theta)
-        return (u @ np.diag(np.log([v1, v2])) @ u.T)[np.triu_indices(2)]
+        return (u.T @ np.diag(np.log([v1, v2])) @ u)[np.triu_indices(2)]
 
     def reverse(self, st):
         theta, v1, v2 = eigen2d(st)
         u = rot_mat_2d(theta)
-        return u @ np.diag(np.exp([v1, v2])) @ u.T
+        return u.T @ np.diag(np.exp([v1, v2])) @ u
 
-    def reverse_grad(self, st):  # TODO: Check this function
+    def reverse_grad(self, st):
         theta, v1, v2 = eigen2d(st)
         dtheta, dv1, dv2 = eigen2d_grad(st)
 
         u = rot_mat_2d(theta)
         c, s = np.cos(theta), np.sin(theta)
-        du = np.array([[-c, s], [-s, -c]])[None, :, :] * dtheta[:, None, None]
+        du = np.array([[-s, c], [-c, -s]])[None, :, :] * dtheta[:, None, None]
 
         x = np.diag(np.exp([v1, v2]))
         dx = np.zeros((3, 2, 2))
         dx[:, 0, 0] = np.exp(v1)*dv1
         dx[:, 1, 1] = np.exp(v2)*dv2
 
-        dr = np.einsum('ijk,kl,ml->ijm', du, x, u)
-        dr += np.einsum('jk,ikl,ml->ijm', u, dx, u)
-        dr += np.einsum('jk,kl,iml->ijm', u, x, du)
+        dr = np.einsum('ikj,kl,lm->ijm', du, x, u)
+        dr += np.einsum('kj,ikl,lm->ijm', u, dx, u)
+        dr += np.einsum('kj,kl,ilm->ijm', u, x, du)
 
         return np.array([dr[:, 0, 0], dr[:, 0, 1], dr[:, 1, 1]])
 
@@ -173,7 +173,7 @@ class Givens(SigmaParameterization):
         v = [np.exp(st[0]), np.exp(st[0]) + np.exp(st[1])]
         return u.T @ np.diag(v) @ u
 
-    def reverse_grad(self, st):  # TODO: check this function
+    def reverse_grad(self, st):
         theta = a_to_theta(st[2])
         dtheta = a_to_theta_grad(st[2])
 
