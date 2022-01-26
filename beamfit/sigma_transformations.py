@@ -106,7 +106,7 @@ class Spherical(SigmaParameterization):
 
     def forward(self, s):
         st = self.ch.forward(s)
-        theta = np.arctan(st[2]/st[1])
+        theta = np.arccos(st[1]/np.sqrt(st[1]**2 + st[2]**2))
         return np.array([np.log(st[0]), np.log(st[1]**2 + st[2]**2)/2, np.log(theta/(np.pi - theta))])
 
     def reverse(self, st):
