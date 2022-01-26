@@ -165,9 +165,9 @@ class Givens(SigmaParameterization):
         return np.array([np.log(v1), np.log(v2 - v1), np.log(theta/(np.pi - theta))])
 
     def reverse(self, st):
-        u = rot_mat_2d(a_to_theta(st[2])).T
+        u = rot_mat_2d(a_to_theta(st[2]))
         v = [np.exp(st[0]), np.exp(st[0]) + np.exp(st[1])]
-        return u @ np.diag(v) @ u.T
+        return u.T @ np.diag(v) @ u
 
     def reverse_grad(self, st):  # TODO: check this function
         theta = a_to_theta(st[2])
@@ -186,8 +186,8 @@ class Givens(SigmaParameterization):
         dx[:, 0, 0] = dv1
         dx[:, 1, 1] = dv2
 
-        dr = np.einsum('ijk,kl,ml->ijm', du, x, u)
-        dr += np.einsum('jk,ikl,ml->ijm', u, dx, u)
-        dr += np.einsum('jk,kl,iml->ijm', u, x, du)
+        dr = np.einsum('ikj,kl,lm->ijm', du, x, u)
+        dr += np.einsum('kj,ikl,lm->ijm', u, dx, u)
+        dr += np.einsum('kj,kl,ilm->ijm', u, x, du)
 
         return np.array([dr[:, 0, 0], dr[:, 0, 1], dr[:, 1, 1]])

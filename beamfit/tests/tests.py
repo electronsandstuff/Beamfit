@@ -72,10 +72,6 @@ class TestBeamfit(unittest.TestCase):
         test_h, test_C = beamfit.fit_supergaussian(test_image)
         np.testing.assert_allclose(test_h, valid_h, rtol=0.2)
 
-        # Do it again with the other prediction methods
-        test_h, test_C = beamfit.fit_supergaussian(test_image, prediction_func="1D_Gaussian")
-        np.testing.assert_allclose(test_h, valid_h, rtol=0.2)
-
     def test_supergaussian(self):
         # Pull out the test data
         X = self.test_data['gaussufunc']['X']
@@ -147,7 +143,7 @@ class TestSigmaParameterization(unittest.TestCase):
             np.array([[100, 1], [1, 0.1]]),
         ]
         self.m = np.array([[1, 1], [1, 5]])  # Example from paper I am following
-        self.ps = [beamfit.Cholesky(), beamfit.LogCholesky(), beamfit.Spherical(), beamfit.MatrixLogarithm(),
+        self.ps = [beamfit.Cholesky(), beamfit.LogCholesky(), beamfit.Spherical(), #beamfit.MatrixLogarithm(),
                   beamfit.Givens()]
 
     def test_inverses(self):
