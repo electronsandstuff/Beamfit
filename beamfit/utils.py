@@ -24,6 +24,14 @@ class AnalysisMethod:
     def __fit__(self, image):
         raise NotImplementedError
 
+    def get_config_dict(self):
+        ret = {'sigma_threshold': self.sigma_threshold}
+        ret.update(self.__get_config_dict__())
+        return ret
+
+    def __get_config_dict__(self):
+        return {}
+
 
 class AnalysisResult:
     def get_mean(self):

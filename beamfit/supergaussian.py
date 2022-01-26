@@ -32,6 +32,7 @@ class SuperGaussian(AnalysisMethod):
         self.predfun_args = predfun_args
         self.maxfev = maxfev
         self.sig_param = factory.create('sig_param', sig_param, **sig_param_args)
+        self.sig_param_args = sig_param_args
 
     def __fit__(self, image):
         lo, hi = image.min(), image.max()  # Normalize image
@@ -102,6 +103,11 @@ class SuperGaussian(AnalysisMethod):
             a=h_opt[6]*(hi - lo),
             o=h_opt[7] + lo
         )
+
+    def __get_config_dict__(self):
+        return {'predfun': type(self.predfun).__name__, 'predfun_args': self.predfun_args,
+                'sig_param': type(self.sig_param).__name__, 'sig_param_args': self.sig_param_args,
+                'maxfev': self.maxfev}
 
 
 def fit_supergaussian(image, image_weights=None, prediction_func="2D_linear_Gaussian", sigma_threshold=3,

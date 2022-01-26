@@ -3,8 +3,8 @@ from .utils import AnalysisMethod, SuperGaussianResult
 
 
 class RMSIntegration(AnalysisMethod):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def __fit__(self, image):
         lo, hi = image.min(), image.max()  # Normalize image
