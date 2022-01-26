@@ -1,9 +1,9 @@
 import numpy as np
 import scipy.optimize as opt
-from gaussufunc import supergaussian, supergaussian_grad
 
 from . import factory
 from .utils import AnalysisMethod, SuperGaussianResult
+from .supergaussian_c_drivers import supergaussian, supergaussian_grad
 
 
 class SigmaTrans:
@@ -20,6 +20,7 @@ class SigmaTrans:
         raise NotImplementedError
 
 
+# TODO: add image weights/uncertainties back to methods
 class SuperGaussian(AnalysisMethod):
     def __init__(self, predfun="GaussianProfile1D", predfun_args=None, sig_param='LogCholesky', sig_param_args=None,
                  maxfev=100, **kwargs):
@@ -85,10 +86,8 @@ class SuperGaussian(AnalysisMethod):
             return supergaussian(xdata[0], xdata[1], *theta_to_h(theta))
 
         def fitfun_grad(xdata, *theta):
-            # TODO: I should really change supergaussian_grad's output to be the transpose of what it currently is
-            # TODO: this would make it line up with the convention for jacobian functions
             jacf = theta_to_h_grad(theta)
-            jacg = np.array(supergaussian_grad(xdata[0], xdata[1], *theta_to_h(theta))).T
+            jacg = supergaussian_grad(xdata[0], xdata[1], *theta_to_h(theta))
             return jacg @ jacf  # Chain rule
 
         theta_opt, theta_c = opt.curve_fit(fitfun, x, y, h_to_theta(self.predfun.fit(image).h), jac=fitfun_grad,

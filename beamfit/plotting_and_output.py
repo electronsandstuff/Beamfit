@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.ndimage as ndimage
-from gaussufunc import supergaussian
+from .supergaussian_c_drivers import supergaussian
 
 from .fit_param_conversion import get_mu_sigma_std, get_mu_sigma
 

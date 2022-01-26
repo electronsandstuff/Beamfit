@@ -28,7 +28,7 @@ static PyMethodDef GaussMethods[] = {
         {NULL, NULL, 0, NULL}
 };
 
-static void double_supergaussian(char **args, npy_intp *dimensions, npy_intp* steps, void* data){
+static void double_supergaussian_internal(char **args, npy_intp *dimensions, npy_intp* steps, void* data){
     npy_intp i,j;
     npy_intp n = dimensions[0];
     double *args_copy[11];
@@ -58,7 +58,7 @@ static void double_supergaussian(char **args, npy_intp *dimensions, npy_intp* st
     }
 }
 
-static void double_supergaussian_grad(char **args, npy_intp *dimensions, npy_intp* steps, void* data){
+static void double_supergaussian_grad_internal(char **args, npy_intp *dimensions, npy_intp* steps, void* data){
   npy_intp i,j;
   npy_intp n = dimensions[0];
   double *args_copy[20];
@@ -116,13 +116,13 @@ static void double_supergaussian_grad(char **args, npy_intp *dimensions, npy_int
 }
 
 // Pointers and argument datatypes for the functions
-PyUFuncGenericFunction funcs_gaussian[1] = {&double_supergaussian};
+PyUFuncGenericFunction funcs_gaussian[1] = {&double_supergaussian_internal};
 static char types_gaussian[11] = {NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE,
                                   NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE,
                                   NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE,
                                   NPY_DOUBLE, NPY_DOUBLE};
 
-PyUFuncGenericFunction funcs_grad[1] = {&double_supergaussian_grad};
+PyUFuncGenericFunction funcs_grad[1] = {&double_supergaussian_grad_internal};
 static char types_grad[20] = {NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE,
                               NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE,
                               NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE,
@@ -159,13 +159,15 @@ PyMODINIT_FUNC PyInit_gaussufunc(void){
     d = PyModule_GetDict(m);
 
     // Add supergaussian
-    supergaussian = PyUFunc_FromFuncAndData(funcs_gaussian, data, types_gaussian, 1, 10, 1, PyUFunc_None, "supergaussian", "needs a docstring", 0);
-    PyDict_SetItemString(d, "supergaussian", supergaussian);
+    supergaussian = PyUFunc_FromFuncAndData(funcs_gaussian, data, types_gaussian, 1, 10, 1, PyUFunc_None,
+    "supergaussian_internal", "", 0);
+    PyDict_SetItemString(d, "supergaussian_internal", supergaussian);
     Py_DECREF(supergaussian);
 
     // Add the gradient
-    grad = PyUFunc_FromFuncAndData(funcs_grad, data, types_grad, 1, 10, 8, PyUFunc_None, "supergaussian_grad", "needs a docstring", 0);
-    PyDict_SetItemString(d, "supergaussian_grad", grad);
+    grad = PyUFunc_FromFuncAndData(funcs_grad, data, types_grad, 1, 10, 8, PyUFunc_None,
+    "supergaussian_grad_internal", "", 0);
+    PyDict_SetItemString(d, "supergaussian_grad_internal", grad);
     Py_DECREF(grad);
 
     return m;

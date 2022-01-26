@@ -1,24 +1,10 @@
-################################################################################
-# Unit tests for beamfit - Christopher M. Pierce (chris@chris-pierce.com)
-################################################################################
-
 import os
 import pickle
 import unittest
-import re
-
 import numpy as np
-
-################################################################################
-# Imports
-################################################################################
 import beamfit
-import gaussufunc
 
 
-################################################################################
-# Helper functions
-################################################################################
 def get_mu_sigma_numerical(h):
     """
     Evaluates the mean and variance/co-variance of the super-Gaussian numerically.  Generates an image with 10 sigma
@@ -48,9 +34,28 @@ def get_mu_sigma_numerical(h):
     return mu, sigma
 
 
-################################################################################
-# The tests
-################################################################################
+def calc_gradient_central_difference(fn, x0=np.array([0, 0, 0]), h=1e-5, atol=1e-9):
+    # Coefficients for the finite differences schemes
+    coef = [np.array([0.0, -1/2, 0.0, 1/2, 0.0]), np.array([1/12, -2/3, 0.0, 2/3, -1/12])]
+
+    # Find the x values to evaluate at
+    n = coef[-2].size
+    x = np.arange(-(n//2), n//2 + 1)[None, None, :] * np.identity(len(x0))[:, :, None] * h
+    x = np.reshape(x, (len(x0), len(x0)*x.shape[2])).T
+    x = x + x0[None, :]
+
+    # Evaluate the Jacobian
+    y = np.array([fn(xx).ravel()[[True, True, False, True]] for xx in x])
+    y = np.reshape(y.T, (y.shape[1], len(x0), y.shape[0] // len(x0)))
+    j = np.array([np.sum(y * c[None, None, :] / h, axis=2) for c in coef])
+
+    # Get the error estimate and set places where Jacobian is zero to nan manually
+    err = np.abs(j[1] - j[0])/j[1]
+    err[j[1] < atol] = float('nan')
+
+    return j[1], err  # Return the Jacobian and error estimates
+
+
 class TestBeamfit(unittest.TestCase):
     def setUp(self):
         '''Loads the data for tests'''
@@ -72,8 +77,6 @@ class TestBeamfit(unittest.TestCase):
         res = beamfit.SuperGaussian().fit(test_image)
         #test_h, test_C = beamfit.fit_supergaussian(test_image)
         np.testing.assert_allclose(res.h, valid_h, rtol=0.2)
-        print(res.get_covariance_matrix(), res.get_covariance_matrix_std())
-
 
     def test_supergaussian(self):
         # Pull out the test data
@@ -83,7 +86,7 @@ class TestBeamfit(unittest.TestCase):
         valid = self.test_data['gaussufunc']['supergaussian']
 
         # Compute the test function
-        test = gaussufunc.supergaussian(X, Y, *h)
+        test = beamfit.supergaussian(X, Y, *h)
 
         # Test it
         np.testing.assert_allclose(test, valid)
@@ -96,7 +99,7 @@ class TestBeamfit(unittest.TestCase):
         valid = self.test_data['gaussufunc']['supergaussian_grad']
 
         # Compute the test function
-        test = gaussufunc.supergaussian_grad(X, Y, *h)
+        test = beamfit.supergaussian_grad(X, Y, *h).T
 
         # Test it
         for t, v in zip(valid, test):
@@ -194,25 +197,3 @@ class TestSigmaParameterization(unittest.TestCase):
         j, err = calc_gradient_central_difference(rev, x0=x0, h=1e-4)
         j_actual = beamfit.eigen2d_grad(x0)
         np.testing.assert_allclose(j_actual, j, atol=1e-8, rtol=1e-5)
-
-
-def calc_gradient_central_difference(fn, x0=np.array([0, 0, 0]), h=1e-5, atol=1e-9):
-    # Coefficients for the finite differences schemes
-    coef = [np.array([0.0, -1/2, 0.0, 1/2, 0.0]), np.array([1/12, -2/3, 0.0, 2/3, -1/12])]
-
-    # Find the x values to evaluate at
-    n = coef[-2].size
-    x = np.arange(-(n//2), n//2 + 1)[None, None, :] * np.identity(len(x0))[:, :, None] * h
-    x = np.reshape(x, (len(x0), len(x0)*x.shape[2])).T
-    x = x + x0[None, :]
-
-    # Evaluate the Jacobian
-    y = np.array([fn(xx).ravel()[[True, True, False, True]] for xx in x])
-    y = np.reshape(y.T, (y.shape[1], len(x0), y.shape[0] // len(x0)))
-    j = np.array([np.sum(y * c[None, None, :] / h, axis=2) for c in coef])
-
-    # Get the error estimate and set places where Jacobian is zero to nan manually
-    err = np.abs(j[1] - j[0])/j[1]
-    err[j[1] < atol] = float('nan')
-
-    return j[1], err  # Return the Jacobian and error estimates
