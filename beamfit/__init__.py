@@ -12,7 +12,8 @@ from .rms_integration import RMSIntegration
 from .supergaussian_c_drivers import supergaussian, supergaussian_grad
 from .debug import AnalysisMethodDebugger
 
-for o in [GaussianProfile1D, GaussianLinearLeastSquares, SuperGaussian]:  # Register all analysis methods to the factory
+# Register all analysis methods to the factory
+for o in [GaussianProfile1D, GaussianLinearLeastSquares, SuperGaussian, RMSIntegration]:
     register('analysis', o.__name__, o)
 
 for o in [Cholesky, LogCholesky, Spherical, MatrixLogarithm, Givens]:  # Register the sigma parameterizations
