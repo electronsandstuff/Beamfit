@@ -1,21 +1,3 @@
-"""
-BeamFit - Robust laser and charged particle beam image analysis
-Copyright (C) 2020 Christopher M. Pierce (contact@chris-pierce.com)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""
-
 import setuptools
 from setuptools.command.build_ext import build_ext as _build_ext
 
@@ -38,7 +20,7 @@ ext_modules = [setuptools.Extension('gaussufunc', sources=['src/gaussian.c'],)]
 # Write out the pacakge metadata
 metadata = dict(
         name='beamfit',
-        version='1.4',
+        version='1.5',
         description='Robust laser and charged particle beam image analysis',
         author='Christopher M. Pierce',
         author_email='contact@chris-pierce.com',
