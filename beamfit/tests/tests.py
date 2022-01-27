@@ -144,7 +144,7 @@ class TestBeamfit(unittest.TestCase):
             # Generate the image
             X, Y = np.mgrid[:256, :512]
             sg = beamfit.supergaussian(X, Y, *h_ref)
-            np.testing.assert_allclose(p.fit(sg).h, h_ref, rtol=0.005, atol=1e-10)
+            np.testing.assert_allclose(p.fit(sg).h, h_ref, rtol=0.005, atol=1e-6)
 
     def test_gaussian_profile_1d(self):
         self.internal_gaussian_test(beamfit.GaussianProfile1D())

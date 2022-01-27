@@ -68,7 +68,7 @@ class GaussianLinearLeastSquares(AnalysisMethod):
         y = np.log(expy)
 
         # Weight the values and pass the uncertainties through the nonlinear transformation of y
-        w = ((hi - lo) * expy / np.array(image_sigmas[~image_norm.mask]))**2  # 1/sigma**2
+        w = np.abs((hi - lo) * expy / np.array(image_sigmas[~image_norm.mask]))  # 1/sigma
         wy = y*w
         wx = x*w[:, None]
 
