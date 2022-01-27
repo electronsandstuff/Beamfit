@@ -124,7 +124,7 @@ class SuperGaussian(AnalysisMethod):
 
     def __get_settings__(self) -> List[Setting]:
         pred_funs = [x for x in factory.get_names('analysis') if x != 'SuperGaussian']
-        pred_fun_settings = [factory.create('analysis', x).get_settings() for x in pred_funs]
+        pred_fun_settings = {x: factory.create('analysis', x).get_settings() for x in pred_funs}
         return [
             Setting(
                 'Intial Prediction Method', 'GaussianProfile1D', stype='list', list_values=pred_funs,
@@ -132,7 +132,7 @@ class SuperGaussian(AnalysisMethod):
             ),
             Setting(
                 'Covariance Matrix Parameterization', 'LogCholesky', stype='list',
-                list_settings=factory.get_names('sig_param')
+                list_values=factory.get_names('sig_param')
             ),
             Setting('Max Function Evaluation', '100')
         ]
@@ -140,7 +140,7 @@ class SuperGaussian(AnalysisMethod):
     def __set_from_settings__(self, settings: Dict[str, str]):
         self.predfun = factory.create('analysis', settings['Intial Prediction Method'][0])
         self.predfun.set_from_settings(settings['Intial Prediction Method'][1])
-        self.sig_param = factory.create('sig_param', settings['Covariance Matrix Parameterization'][0])
+        self.sig_param = factory.create('sig_param', settings['Covariance Matrix Parameterization'])
         maxfev = int(settings['Max Function Evaluation'])
         if maxfev < 1:
             raise ValueError(f'maxfev must be greater than zero, got {maxfev}')
