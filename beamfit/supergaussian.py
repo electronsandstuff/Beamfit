@@ -20,7 +20,6 @@ class SigmaTrans:
         raise NotImplementedError
 
 
-# TODO: add image weights/uncertainties back to methods
 class SuperGaussian(AnalysisMethod):
     def __init__(self, predfun="GaussianProfile1D", predfun_args=None, sig_param='LogCholesky', sig_param_args=None,
                  maxfev=100, **kwargs):
@@ -101,13 +100,19 @@ class SuperGaussian(AnalysisMethod):
         j = theta_to_h_grad(theta_opt)
         h_c = j @ theta_c @ j.T
 
+        # Transform c according to normalization
+        j_norm = np.identity(8)
+        j_norm[6, 6] = (hi - lo)
+        j_norm[7, 7] = (hi - lo)
+        h_c = j_norm @ h_c @ j_norm.T
+
         # Return the fit and the covariance variance matrix
         return SuperGaussianResult(
             mu=np.array([h_opt[0], h_opt[1]]),
             sigma=np.array([[h_opt[2], h_opt[3]], [h_opt[3], h_opt[4]]]),
             n=h_opt[5],
             a=h_opt[6]*(hi - lo),
-            o=h_opt[7] + lo,
+            o=h_opt[7]*(hi - lo) + lo,
             c=h_c
         )
 
