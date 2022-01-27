@@ -1,45 +1,18 @@
 import numpy as np
-import scipy.special as special
+from .utils import SuperGaussianResult
 
 
-def get_mu_sigma(h, pixel_size):
-    # Pull out the parameters
-    mu = np.array([h[0], h[1]]) * pixel_size
-
-    # Get sigma
-    sigma = np.array([[h[2], h[3]], [h[3], h[4]]])
-    n = h[5]
-    scaling_factor = special.gamma((2 + n) / n) / 2 / special.gamma(1 + 1 / n)
-    sigma = sigma * scaling_factor * pixel_size ** 2
-
-    # Return them
-    return mu, sigma
+def get_mu_sigma(h, pixel_size):  # For backwards compatibility
+    r = SuperGaussianResult(h=h)
+    return r.get_mean() * pixel_size, r.get_covariance_matrix() * pixel_size**2
 
 
-def get_mu_sigma_std(h, C, pixel_size, pixel_size_std):
-    # Pull out the parameters
-    mu = np.array([h[0], h[1]])
-
-    # Get sigma
-    sigma = np.array([[h[2], h[3]], [h[3], h[4]]])
-    n = h[5]
-    scaling_factor = special.gamma((2 + n) / n) / 2 / special.gamma(1 + 1 / n)
-    sigma = sigma * scaling_factor
-
-    # Calculate mu's variance
-    mu_var = np.array([C[0, 0], C[1, 1]])
-
-    # Calculate Sigma's variance (hack for now to deal w/ uncertainty)
-    sigma_var = np.array([[C[2, 2] * 2 * np.sqrt(h[2]), C[3, 3]], [C[3, 3], C[2, 2] * 2 * np.sqrt(h[2])]])
-
-    n = h[5]
-    n_var = C[5, 5]
-    scaling_factor_deriv = special.gamma((2 + n) / n) / 2 / n ** 2 * special.polygamma(0, 1 + 1 / n)
-    scaling_factor_deriv += (1 / n - (2 + n) / n ** 2) * special.gamma((2 + n) / n) * special.polygamma(0,
-                                                                                                        (2 + n) / n) / 2
-    scaling_factor_deriv /= special.gamma(1 + 1 / n)
-    scaling_factor_var = n_var * scaling_factor_deriv ** 2
-    sigma_var = sigma_var * scaling_factor_var + sigma ** 2 * scaling_factor_var + scaling_factor ** 2 * sigma_var
+def get_mu_sigma_std(h, c, pixel_size, pixel_size_std):  # For backwards compatibility
+    r = SuperGaussianResult(h=h, c=c)
+    mu = r.get_mean()
+    sigma = r.get_covariance_matrix()
+    mu_var = r.get_mean_std()**2
+    sigma_var = r.get_covariance_matrix_std()**2
 
     # Scale by the pixel size and calculate variances
     pixel_size_var = pixel_size_std ** 2

@@ -69,12 +69,15 @@ def super_gaussian_scaling_factor_grad(n):
 
 
 class SuperGaussianResult(AnalysisResult):
-    def __init__(self, mu=np.zeros(2), sigma=np.identity(2), a=1.0, o=0.0, n=1.0, c=None):
-        self.mu = mu  # Centroid
-        self.sigma = sigma  # Variance-covariance matrix
-        self.a = a  # Amplitude
-        self.o = o  # Background offset
-        self.n = n  # Supergaussian parameter
+    def __init__(self, mu=np.zeros(2), sigma=np.identity(2), a=1.0, o=0.0, n=1.0, c=None, h=None):
+        if h is None:
+            self.mu = mu  # Centroid
+            self.sigma = sigma  # Variance-covariance matrix
+            self.a = a  # Amplitude
+            self.o = o  # Background offset
+            self.n = n  # Supergaussian parameter
+        else:
+            self.h = h
         self.c = c  # covariance matrix of h
 
     @property

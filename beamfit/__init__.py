@@ -5,7 +5,7 @@ from .gaussian_linear_least_squares import GaussianLinearLeastSquares
 from .plotting_and_output import pretty_print_loc_and_size, plot_threshold, plot_residuals, plot_beam_contours
 from .supergaussian import fit_supergaussian, SuperGaussian
 from .utils import get_image_and_weight, get_config_dict_analysis_method, create_analysis_method_from_dict,\
-    super_gaussian_scaling_factor, super_gaussian_scaling_factor_grad
+    super_gaussian_scaling_factor, super_gaussian_scaling_factor_grad, SuperGaussianResult
 from .sigma_transformations import Cholesky, LogCholesky, Spherical, MatrixLogarithm, Givens, eigen2d_grad, eigen2d
 from .rms_integration import RMSIntegration
 from .supergaussian_c_drivers import supergaussian, supergaussian_grad
