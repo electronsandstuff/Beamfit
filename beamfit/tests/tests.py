@@ -34,7 +34,7 @@ def get_mu_sigma_numerical(h):
     return mu, sigma
 
 
-def calc_gradient_central_difference(fn, x0=np.array([0, 0, 0]), h=1e-5, atol=1e-9):
+def calc_gradient_central_difference(fn, x0=np.array([0, 0, 0]), h=1e-5, atol=1e-9, fn_type='sigma_mat'):
     # Coefficients for the finite differences schemes
     coef = [np.array([0.0, -1/2, 0.0, 1/2, 0.0]), np.array([1/12, -2/3, 0.0, 2/3, -1/12])]
 
@@ -45,14 +45,25 @@ def calc_gradient_central_difference(fn, x0=np.array([0, 0, 0]), h=1e-5, atol=1e
     x = x + x0[None, :]
 
     # Evaluate the Jacobian
-    y = np.array([fn(xx).ravel()[[True, True, False, True]] for xx in x])
+    if fn_type == 'sigma_mat':
+        def fn_internal(x):
+            return fn(x).ravel()[[True, True, False, True]]
+    elif fn_type == 'scalar':
+        def fn_internal(x):
+            return np.array([fn(x)])
+    else:
+        raise ValueError(f'Unrecognized value for "fn_type": "{fn_type}"')
+
+    y = np.array([fn_internal(xx) for xx in x])
     y = np.reshape(y.T, (y.shape[1], len(x0), y.shape[0] // len(x0)))
     j = np.array([np.sum(y * c[None, None, :] / h, axis=2) for c in coef])
 
     # Get the error estimate and set places where Jacobian is zero to nan manually
-    err = np.abs(j[1] - j[0])/j[1]
-    err[j[1] < atol] = float('nan')
+    err = np.abs((j[1] - j[0])/j[1])
+    err[np.abs(j[1]) < atol] = float('nan')
 
+    if fn_type == 'scalar':
+        return j[1][0, 0], err[0, 0]
     return j[1], err  # Return the Jacobian and error estimates
 
 
@@ -139,6 +150,12 @@ class TestBeamfit(unittest.TestCase):
 
     def test_rms_integration(self):
         self.internal_gaussian_test(beamfit.RMSIntegration())
+
+    def test_supergaussian_scaling_grad(self):
+        for x0 in [0.5, 0.75, 1.0, 1.25, 1.5]:
+            j, _ = calc_gradient_central_difference(beamfit.super_gaussian_scaling_factor, x0=np.array([x0]),
+                                                      fn_type='scalar')
+            np.testing.assert_allclose(beamfit.super_gaussian_scaling_factor_grad(x0), j)
 
 
 class TestSigmaParameterization(unittest.TestCase):

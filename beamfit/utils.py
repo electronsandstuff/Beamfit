@@ -56,6 +56,18 @@ class AnalysisResult:
         return None
 
 
+def super_gaussian_scaling_factor(n):
+    return special.gamma((2 + n) / n) / 2 / special.gamma(1 + 1 / n)
+
+
+def super_gaussian_scaling_factor_grad(n):
+    n = n
+    scaling_factor_deriv = special.gamma((2 + n)/n)/2/n**2*special.polygamma(0, 1 + 1/n)
+    scaling_factor_deriv += (1/n - (2 + n)/n**2)*special.gamma((2 + n)/n)*special.polygamma(0, (2 + n)/n)/2
+    scaling_factor_deriv /= special.gamma(1 + 1 / n)
+    return scaling_factor_deriv
+
+
 class SuperGaussianResult(AnalysisResult):
     def __init__(self, mu=np.zeros(2), sigma=np.identity(2), a=1.0, o=0.0, n=1.0, c=None):
         self.mu = mu  # Centroid
@@ -86,18 +98,8 @@ class SuperGaussianResult(AnalysisResult):
     def get_mean(self):
         return self.mu
 
-    def sigma_scaling_factor(self):
-        return special.gamma((2 + self.n) / self.n) / 2 / special.gamma(1 + 1 / self.n)
-
-    def sigma_scaling_factor_grad(self):
-        n = self.n
-        scaling_factor_deriv = special.gamma((2 + n)/n)/2/n**2*special.polygamma(0, 1 + 1/n)
-        scaling_factor_deriv += (1/n - (2 + n)/n**2)*special.gamma((2 + n)/n)*special.polygamma(0, (2 + n)/n)/2
-        scaling_factor_deriv /= special.gamma(1 + 1 / n)
-        return scaling_factor_deriv
-
     def get_covariance_matrix(self):
-        return self.sigma * self.sigma_scaling_factor()
+        return self.sigma * super_gaussian_scaling_factor(self.n)
 
     def get_mean_std(self):
         return np.sqrt(np.array([self.c[0, 0], self.c[1, 1]]))
@@ -105,8 +107,8 @@ class SuperGaussianResult(AnalysisResult):
     def get_covariance_matrix_std(self):
         # Find the Jacobian of the scaling transformation
         scaling_j = np.identity(4)
-        scaling_j[:3, :3] *= self.sigma_scaling_factor()
-        scaling_j[:3, 3] = self.h[2:5] * self.sigma_scaling_factor_grad()
+        scaling_j[:3, :3] *= super_gaussian_scaling_factor(self.n)
+        scaling_j[:3, 3] = self.h[2:5] * super_gaussian_scaling_factor_grad(self.n)
 
         # Get the covariance matrix of our variables
         sigma_n_cov = self.c[2:6, 2:6]
