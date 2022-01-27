@@ -17,16 +17,25 @@ class AnalysisMethod:
         self.sigma_threshold = sigma_threshold
         self.median_filter_size = median_filter_size
 
-    def fit(self, image):
+    def fit(self, image, image_sigmas=None):
+        """
+        Measure the RMS size and centroid of the supplied image. If the image is passed as a masked array then
+        (depending on support by the fitting method) only unmasked pixels are considered. This can be useful for
+        selecting oddly shaped regions of interest.
+
+        :param image: 2D np.ndarray or np.ma.array, the image as a grayscale array or masked array of pixels
+        :param image_sigmas: (optional) the uncertainty in each pixel intensity
+        :return: AnalysisResult object (depends on analysis method)
+        """
         if not np.ma.isMaskedArray(image):  # Make a mask if there isn't one
             image = np.ma.array(image)
         if self.median_filter_size is not None:  # Median filter the image if required
             image = signal.medfilt2d(image, kernel_size=self.median_filter_size)
         if self.sigma_threshold is not None:  # Apply threshold if provided
             image.mask = np.bitwise_or(image.mask, image < (image.max() * np.exp(-self.sigma_threshold**2)))
-        return self.__fit__(image)
+        return self.__fit__(image, image_sigmas)
 
-    def __fit__(self, image):
+    def __fit__(self, image, image_sigmas=None):
         raise NotImplementedError
 
     def get_config_dict(self):

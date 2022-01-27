@@ -6,7 +6,8 @@ class RMSIntegration(AnalysisMethod):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def __fit__(self, image):
+    # TODO: integrate image uncertainty
+    def __fit__(self, image, image_sigmas=None):
         lo, hi = image.min(), image.max()  # Normalize image
         image = (image - lo)/(hi - lo)
 

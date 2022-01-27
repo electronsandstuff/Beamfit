@@ -4,11 +4,12 @@ from scipy import special, optimize as opt
 from .utils import AnalysisMethod, SuperGaussianResult
 
 
+# TODO: integrate pixel weights
 class GaussianProfile1D(AnalysisMethod):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def __fit__(self, image):
+    def __fit__(self, image, image_sigmas=None):
         """
         Integrates the image across each axis and fits a Gaussian function with offset to each axis.  Predicts the 2D
         Gaussian of best fit from the resulting data.

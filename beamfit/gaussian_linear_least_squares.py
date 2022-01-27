@@ -3,11 +3,12 @@ import numpy as np
 from .utils import AnalysisMethod, SuperGaussianResult
 
 
+# TODO: integrate image uncertainty
 class GaussianLinearLeastSquares(AnalysisMethod):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def __fit__(self, image):
+    def __fit__(self, image, image_sigmas=None):
         # Normalize image z axis
         lo, hi = image.min(), image.max()
         image_norm = ((image - lo)/(hi - lo) + np.exp(-10))/(1 + np.exp(-10))

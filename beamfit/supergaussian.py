@@ -35,7 +35,7 @@ class SuperGaussian(AnalysisMethod):
         self.sig_param = factory.create('sig_param', sig_param, **sig_param_args)
         self.sig_param_args = sig_param_args
 
-    def __fit__(self, image):
+    def __fit__(self, image, image_sigmas=None):
         lo, hi = image.min(), image.max()  # Normalize image
         image = (image - lo)/(hi - lo)
 
@@ -90,8 +90,13 @@ class SuperGaussian(AnalysisMethod):
             jacg = supergaussian_grad(xdata[0], xdata[1], *theta_to_h(theta))
             return jacg @ jacf  # Chain rule
 
-        theta_opt, theta_c = opt.curve_fit(fitfun, x, y, h_to_theta(self.predfun.fit(image).h), jac=fitfun_grad,
-                                     maxfev=self.maxfev)
+        if image_sigmas is None:
+            theta_opt, theta_c = opt.curve_fit(fitfun, x, y, h_to_theta(self.predfun.fit(image).h), jac=fitfun_grad,
+                                         maxfev=self.maxfev)
+        else:
+            sigma = image_sigmas[~image.mask]/(hi - lo)
+            theta_opt, theta_c = opt.curve_fit(fitfun, x, y, h_to_theta(self.predfun.fit(image).h), sigma=sigma,
+                                               jac=fitfun_grad, absolute_sigma=True, maxfev=self.maxfev)
         h_opt = theta_to_h(theta_opt)
         j = theta_to_h_grad(theta_opt)
         h_c = j @ theta_c @ j.T
@@ -115,5 +120,7 @@ class SuperGaussian(AnalysisMethod):
 def fit_supergaussian(image, image_weights=None, prediction_func="2D_linear_Gaussian", sigma_threshold=3,
                       sigma_threshold_guess=1, smoothing=5, maxfev=100):  # Backwards compatibility
     predfun = {'2D_linear_Gaussian': 'GaussianLinearLeastSquares', '1D_Gaussian': 'GaussianProfile1D'}[prediction_func]
-    return SuperGaussian(predfun=predfun, predfun_args={'sigma_threshold': sigma_threshold_guess},
-                         sigma_threshold=sigma_threshold, maxfev=maxfev).fit(image).h, np.identity(8)
+    ret = SuperGaussian(predfun=predfun, predfun_args={'sigma_threshold': sigma_threshold_guess,
+                                                       'median_filter_size': smoothing},
+                        sigma_threshold=sigma_threshold, maxfev=maxfev).fit(image, image_weights)
+    return ret.h, ret.c

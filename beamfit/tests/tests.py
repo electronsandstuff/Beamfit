@@ -88,6 +88,9 @@ class TestBeamfit(unittest.TestCase):
         res = beamfit.SuperGaussian().fit(test_image)
         #test_h, test_C = beamfit.fit_supergaussian(test_image)
         np.testing.assert_allclose(res.h, valid_h, rtol=0.2)
+        res = beamfit.SuperGaussian().fit(test_image, np.ones_like(test_image))
+        np.testing.assert_allclose(res.h, valid_h, rtol=0.2)
+
 
     def test_supergaussian(self):
         # Pull out the test data
