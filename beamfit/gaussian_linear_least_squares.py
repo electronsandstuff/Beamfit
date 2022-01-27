@@ -1,6 +1,7 @@
 import numpy as np
+from typing import List, Dict
 
-from .utils import AnalysisMethod, SuperGaussianResult
+from .utils import AnalysisMethod, SuperGaussianResult, Setting
 
 
 def x_to_h(x):
@@ -86,6 +87,12 @@ class GaussianLinearLeastSquares(AnalysisMethod):
 
         # Return the fit
         return SuperGaussianResult(h=h, c=c)
+
+    def __get_settings__(self) -> List[Setting]:
+        return []
+
+    def __set_from_settings__(self, settings: Dict[str, str]):
+        pass
 
 
 def fit_gaussian_linear_least_squares(image, sigma_threshold=2, plot=False):  # Backwards compatibility

@@ -1,8 +1,9 @@
 import numpy as np
 import scipy.optimize as opt
+from typing import List, Dict
 
 from . import factory
-from .utils import AnalysisMethod, SuperGaussianResult
+from .utils import AnalysisMethod, SuperGaussianResult, Setting
 from .supergaussian_c_drivers import supergaussian, supergaussian_grad
 
 
@@ -120,6 +121,30 @@ class SuperGaussian(AnalysisMethod):
         return {'predfun': type(self.predfun).__name__, 'predfun_args': self.predfun_args,
                 'sig_param': type(self.sig_param).__name__, 'sig_param_args': self.sig_param_args,
                 'maxfev': self.maxfev}
+
+    def __get_settings__(self) -> List[Setting]:
+        pred_funs = [x for x in factory.get_names('analysis') if x != 'SuperGaussian']
+        pred_fun_settings = [factory.create('analysis', x).get_settings() for x in pred_funs]
+        return [
+            Setting(
+                'Intial Prediction Method', 'GaussianProfile1D', stype='list', list_values=pred_funs,
+                list_settings=pred_fun_settings
+            ),
+            Setting(
+                'Covariance Matrix Parameterization', 'LogCholesky', stype='list',
+                list_settings=factory.get_names('sig_param')
+            ),
+            Setting('Max Function Evaluation', '100')
+        ]
+
+    def __set_from_settings__(self, settings: Dict[str, str]):
+        self.predfun = factory.create('analysis', settings['Intial Prediction Method'][0])
+        self.predfun.set_from_settings(settings['Intial Prediction Method'][1])
+        self.sig_param = factory.create('sig_param', settings['Covariance Matrix Parameterization'][0])
+        maxfev = int(settings['Max Function Evaluation'])
+        if maxfev < 1:
+            raise ValueError(f'maxfev must be greater than zero, got {maxfev}')
+        self.maxfev = maxfev
 
 
 def fit_supergaussian(image, image_weights=None, prediction_func="2D_linear_Gaussian", sigma_threshold=3,

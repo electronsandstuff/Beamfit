@@ -1,5 +1,6 @@
 import numpy as np
-from .utils import AnalysisMethod, SuperGaussianResult
+from .utils import AnalysisMethod, SuperGaussianResult, Setting
+from typing import List, Dict
 
 
 class RMSIntegration(AnalysisMethod):
@@ -16,3 +17,9 @@ class RMSIntegration(AnalysisMethod):
         mu = np.array([mmnts[1, 0], mmnts[0, 1]]) / mmnts[0, 0]
         nu = np.array([[mmnts[2, 0], mmnts[1, 1]], [mmnts[1, 1], mmnts[0, 2]]]) / mmnts[0, 0]
         return SuperGaussianResult(mu=mu, sigma=nu - mu[:, None]*mu[None, :], a=(hi - lo), o=lo)
+
+    def __get_settings__(self) -> List[Setting]:
+        return []
+
+    def __set_from_settings__(self, settings: Dict[str, str]):
+        pass

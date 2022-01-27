@@ -2,6 +2,17 @@ import numpy as np
 import scipy.special as special
 import scipy.signal as signal
 from . import factory
+from dataclasses import dataclass
+from typing import List, Dict
+
+
+@dataclass
+class Setting:
+    name: str
+    default: str
+    stype: str = 'str'
+    list_values: List[str] = None
+    list_settings: list = None
 
 
 def get_image_and_weight(raw_images, dark_fields, mask):
@@ -45,6 +56,44 @@ class AnalysisMethod:
 
     def __get_config_dict__(self):
         return {}
+
+    def get_settings(self) -> List[Setting]:
+        arr = [
+            Setting('Sigma Threshold', 'Off', stype='list', list_values=['Off', 'On']),
+            Setting('Sigma Threshold Size', '3.0'),
+            Setting('Median Filter', 'Off', stype='list', list_values=['Off', 'On']),
+            Setting('Median Filter Size', '3'),
+        ]
+        return arr + self.__get_settings__()
+
+    def __get_settings__(self) -> List[Setting]:
+        raise NotImplementedError()
+
+    def set_from_settings(self, settings: Dict[str, str]):
+        if settings['Sigma Threshold'] == 'On':
+            sigma_threshold = float(settings['Sigma Threshold Size'])
+            if sigma_threshold <= 0.0:
+                raise ValueError(f"Sigma threshold must be greater than zero, got {sigma_threshold}")
+            self.sigma_threshold = sigma_threshold
+        elif settings['Sigma Threshold'] == 'Off':
+            self.sigma_threshold = None
+        else:
+            raise ValueError(f'Unrecognized value for "Sigma Threshold": "{settings["Sigma Threshold"]}"')
+        if settings['Median Filter'] == 'On':
+            median_filter_size = int(settings['Median Filter Size'])
+            if median_filter_size < 3:
+                raise ValueError(f'Median filter size must be at least 3, got {median_filter_size}')
+            if median_filter_size % 2 == 0:
+                raise ValueError(f'Median filter size must be odd integer, not {median_filter_size}')
+            self.median_filter_size = median_filter_size
+        elif settings['Median Filter'] == 'Off':
+            self.median_filter_size = None
+        else:
+            raise ValueError(f'Unrecognized value for "Median Filter": "{settings["Median Filter"]}"')
+        self.__set_from_settings__(settings)
+
+    def __set_from_settings__(self, settings: Dict[str, str]):
+        raise NotImplementedError()
 
 
 def get_config_dict_analysis_method(m: AnalysisMethod):
