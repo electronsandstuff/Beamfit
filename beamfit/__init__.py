@@ -17,3 +17,11 @@ for o in [GaussianProfile1D, GaussianLinearLeastSquares, SuperGaussian]:  # Regi
 
 for o in [Cholesky, LogCholesky, Spherical, MatrixLogarithm, Givens]:  # Register the sigma parameterizations
     register('sig_param', o.__name__, o)
+
+
+def get_analysis_names():
+    return get_names('analysis')
+
+
+def create_analysis(name, **kwargs):
+    return create('analysis', name, **kwargs)
