@@ -23,7 +23,7 @@ class AnalysisMethod:
         if self.median_filter_size is not None:  # Median filter the image if required
             image = signal.medfilt2d(image, kernel_size=self.median_filter_size)
         if self.sigma_threshold is not None:  # Apply threshold if provided
-            image.mask = np.bitwise_and(image.mask, image < image.max() * np.exp(-self.sigma_threshold))
+            image.mask = np.bitwise_or(image.mask, image < (image.max() * np.exp(-self.sigma_threshold**2)))
         return self.__fit__(image)
 
     def __fit__(self, image):

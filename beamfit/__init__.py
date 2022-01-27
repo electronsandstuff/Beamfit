@@ -9,6 +9,7 @@ from .utils import get_image_and_weight, get_config_dict_analysis_method, create
 from .sigma_transformations import Cholesky, LogCholesky, Spherical, MatrixLogarithm, Givens, eigen2d_grad, eigen2d
 from .rms_integration import RMSIntegration
 from .supergaussian_c_drivers import supergaussian, supergaussian_grad
+from .debug import AnalysisMethodDebugger
 
 for o in [GaussianProfile1D, GaussianLinearLeastSquares, SuperGaussian]:  # Register all analysis methods to the factory
     register('analysis', o.__name__, o)
