@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.special as special
+import scipy.signal as signal
 from . import factory
 
 
@@ -12,13 +13,16 @@ def get_image_and_weight(raw_images, dark_fields, mask):
 
 
 class AnalysisMethod:
-    def __init__(self, sigma_threshold=None):
+    def __init__(self, sigma_threshold=None, median_filter_size=None):
         self.sigma_threshold = sigma_threshold
+        self.median_filter_size = median_filter_size
 
     def fit(self, image):
         if not np.ma.isMaskedArray(image):  # Make a mask if there isn't one
             image = np.ma.array(image)
-        if self.sigma_threshold is not None:
+        if self.median_filter_size is not None:  # Median filter the image if required
+            image = signal.medfilt2d(image, kernel_size=self.median_filter_size)
+        if self.sigma_threshold is not None:  # Apply threshold if provided
             image.mask = np.bitwise_and(image.mask, image < image.max() * np.exp(-self.sigma_threshold))
         return self.__fit__(image)
 

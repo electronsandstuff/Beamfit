@@ -67,6 +67,8 @@ def calc_gradient_central_difference(fn, x0=np.array([0, 0, 0]), h=1e-5, atol=1e
     return j[1], err  # Return the Jacobian and error estimates
 
 
+# TODO: add test for median filter
+# TODO: add test for image threshold
 class TestBeamfit(unittest.TestCase):
     def setUp(self):
         '''Loads the data for tests'''
