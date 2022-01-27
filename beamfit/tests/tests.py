@@ -48,6 +48,8 @@ def calc_gradient_central_difference(fn, x0=np.array([0, 0, 0]), h=1e-5, atol=1e
     if fn_type == 'sigma_mat':
         def fn_internal(x):
             return fn(x).ravel()[[True, True, False, True]]
+    elif fn_type == 'vector':
+        fn_internal = fn
     elif fn_type == 'scalar':
         def fn_internal(x):
             return np.array([fn(x)])
@@ -158,6 +160,17 @@ class TestBeamfit(unittest.TestCase):
             j, _ = calc_gradient_central_difference(beamfit.super_gaussian_scaling_factor, x0=np.array([x0]),
                                                       fn_type='scalar')
             np.testing.assert_allclose(beamfit.super_gaussian_scaling_factor_grad(x0), j)
+
+    def test_gaussian_linear_least_squares_trans_grad(self):
+        x0s = [
+            np.array([1, 1, 1, 1, 1, 1, 1, 0]),
+            np.array([1, 2, 3, 4, 5, 6, 1, 0]),
+            np.array([6, 5, 4, 3, 2, 1, 1, 0]),
+            np.array([6, 5, 4, 4, 5, 6, 1, 0]),
+        ]
+        for x0 in x0s:
+            j, _ = calc_gradient_central_difference(beamfit.gaussian_lls_trans, x0=x0, fn_type='vector')
+            np.testing.assert_allclose(beamfit.gaussian_lls_trans_grad(x0), j, atol=1e-10)
 
 
 class TestAnalysisMethod(unittest.TestCase):

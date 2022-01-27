@@ -1,7 +1,8 @@
 from .factory import register, create, unregister, get_names
 from .fit_param_conversion import get_mu_sigma, get_mu_sigma_std
 from .gaussian_fit_1d import fit_gaussian_1d, GaussianProfile1D
-from .gaussian_linear_least_squares import GaussianLinearLeastSquares
+from .gaussian_linear_least_squares import GaussianLinearLeastSquares, x_to_h as gaussian_lls_trans,\
+    x_to_h_grad as gaussian_lls_trans_grad
 from .plotting_and_output import pretty_print_loc_and_size, plot_threshold, plot_residuals, plot_beam_contours
 from .supergaussian import fit_supergaussian, SuperGaussian
 from .utils import get_image_and_weight, get_config_dict_analysis_method, create_analysis_method_from_dict,\
