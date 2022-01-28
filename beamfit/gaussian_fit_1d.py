@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import special, optimize as opt
-from typing import List, Dict
+from typing import List, Dict, Union, Any
 
 from .utils import AnalysisMethod, SuperGaussianResult, Setting
 
@@ -96,7 +96,7 @@ class GaussianProfile1D(AnalysisMethod):
     def __get_settings__(self) -> List[Setting]:
         return []
 
-    def __set_from_settings__(self, settings: Dict[str, str]):
+    def __set_from_settings__(self, settings: Dict[str, Union[str, Dict[str, Any]]]):
         pass
 
 

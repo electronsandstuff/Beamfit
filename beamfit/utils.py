@@ -1,18 +1,19 @@
+from __future__ import annotations
 import numpy as np
 import scipy.special as special
 import scipy.signal as signal
 from . import factory
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List, Dict, Union, Any
 
 
 @dataclass
 class Setting:
     name: str
     default: str
-    stype: str = 'str'
-    list_values: List[str] = None
-    list_settings: list = None
+    stype: str = 'str'  # can be 'str', 'list', 'settings_list'
+    list_values: List[str] = None  # Options used with 'list' type
+    list_settings: Dict[str, List[Setting]] = None  # Map from names in list_values to lists of settings for that option
 
 
 def get_image_and_weight(raw_images, dark_fields, mask):
@@ -92,7 +93,7 @@ class AnalysisMethod:
             raise ValueError(f'Unrecognized value for "Median Filter": "{settings["Median Filter"]}"')
         self.__set_from_settings__(settings)
 
-    def __set_from_settings__(self, settings: Dict[str, str]):
+    def __set_from_settings__(self, settings: Dict[str, Union[str, Dict[str, Any]]]):
         raise NotImplementedError()
 
 

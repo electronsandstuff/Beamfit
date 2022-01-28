@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.optimize as opt
-from typing import List, Dict
+from typing import List, Dict, Union, Any
 
 from . import factory
 from .utils import AnalysisMethod, SuperGaussianResult, Setting
@@ -127,7 +127,7 @@ class SuperGaussian(AnalysisMethod):
         pred_fun_settings = {x: factory.create('analysis', x).get_settings() for x in pred_funs}
         return [
             Setting(
-                'Intial Prediction Method', 'GaussianProfile1D', stype='list', list_values=pred_funs,
+                'Intial Prediction Method', 'GaussianProfile1D', stype='settings_list', list_values=pred_funs,
                 list_settings=pred_fun_settings
             ),
             Setting(
@@ -137,9 +137,9 @@ class SuperGaussian(AnalysisMethod):
             Setting('Max Function Evaluation', '100')
         ]
 
-    def __set_from_settings__(self, settings: Dict[str, str]):
-        self.predfun = factory.create('analysis', settings['Intial Prediction Method'][0])
-        self.predfun.set_from_settings(settings['Intial Prediction Method'][1])
+    def __set_from_settings__(self, settings: Dict[str, Union[str, Dict[str, Any]]]):
+        self.predfun = factory.create('analysis', settings['Intial Prediction Method']['name'])
+        self.predfun.set_from_settings(settings['Intial Prediction Method']['settings'])
         self.sig_param = factory.create('sig_param', settings['Covariance Matrix Parameterization'])
         maxfev = int(settings['Max Function Evaluation'])
         if maxfev < 1:

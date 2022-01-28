@@ -1,6 +1,6 @@
 import numpy as np
 from .utils import AnalysisMethod, SuperGaussianResult, Setting
-from typing import List, Dict
+from typing import List, Dict, Union, Any
 
 
 class RMSIntegration(AnalysisMethod):
@@ -21,5 +21,5 @@ class RMSIntegration(AnalysisMethod):
     def __get_settings__(self) -> List[Setting]:
         return []
 
-    def __set_from_settings__(self, settings: Dict[str, str]):
+    def __set_from_settings__(self, settings: Dict[str, Union[str, Dict[str, Any]]]):
         pass
