@@ -189,6 +189,12 @@ class TestAnalysisMethod(unittest.TestCase):
         o = beamfit.AnalysisMethodDebugger(median_filter_size=3).fit(image)
         self.assertAlmostEqual(o.max(), 1, places=1)
 
+    def test_masked(self):
+        m, n = np.mgrid[:64, :64]
+        image = beamfit.supergaussian(n, m, 32, 32, 8**2, 0, 8**2, 1, 1, 0)
+        o = beamfit.AnalysisMethodDebugger(sigma_threshold=2, median_filter_size=3).fit(image)
+        self.assertTrue(np.ma.isMaskedArray(o))
+
 
 class TestSigmaParameterization(unittest.TestCase):
     def setUp(self):

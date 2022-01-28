@@ -42,7 +42,7 @@ class AnalysisMethod:
         if not np.ma.isMaskedArray(image):  # Make a mask if there isn't one
             image = np.ma.array(image)
         if self.median_filter_size is not None:  # Median filter the image if required
-            image = signal.medfilt2d(image, kernel_size=self.median_filter_size)
+            image = np.ma.array(signal.medfilt2d(image, kernel_size=self.median_filter_size), mask=image.mask)
         if self.sigma_threshold is not None:  # Apply threshold if provided
             image.mask = np.bitwise_or(image.mask, image < (image.max() * np.exp(-self.sigma_threshold**2)))
         return self.__fit__(image, image_sigmas)
