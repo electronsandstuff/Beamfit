@@ -51,7 +51,7 @@ class AnalysisMethod:
         raise NotImplementedError
 
     def get_config_dict(self):
-        ret = {'sigma_threshold': self.sigma_threshold}
+        ret = {'sigma_threshold': self.sigma_threshold, 'median_filter_size': self.median_filter_size}
         ret.update(self.__get_config_dict__())
         return ret
 
