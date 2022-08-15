@@ -3,6 +3,7 @@ import pickle
 import unittest
 import numpy as np
 import beamfit
+import tensorflow as tf
 
 
 def get_mu_sigma_numerical(h):
@@ -213,6 +214,8 @@ class TestSigmaParameterization(unittest.TestCase):
             for m in self.matrices:
                 try:
                     np.testing.assert_allclose(p.reverse(p.forward(m)), m, atol=1e-15)
+                    np.testing.assert_allclose(p.reverse(tf.Variable(p.forward(m))).numpy(), m, atol=1e-7)
+
                 except:
                     print(f'Failed at {p}')
                     raise
