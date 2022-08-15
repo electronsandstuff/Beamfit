@@ -35,9 +35,10 @@ metadata = dict(
         setup_requires=['numpy'],
         package_data={'': ['tests/test_data.pickle']},
         include_package_data=True,
-        license='GNU Affero General Public License v3 or later (AGPLv3+)',
+        license="BSD-3-Clause",
         classifiers=[
           "Programming Language :: Python :: 3",
+          "License :: OSI Approved :: BSD License",
         ],
         ext_modules=ext_modules,
         cmdclass={'build_ext': BuildExt}
