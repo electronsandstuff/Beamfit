@@ -1,10 +1,11 @@
 import numpy as np
-import scipy.optimize as opt
 from typing import List, Dict, Union, Any
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Silence tensorflow informational output
+import tensorflow as tf
 
 from . import factory
 from .utils import AnalysisMethod, SuperGaussianResult, Setting
-from .supergaussian_c_drivers import supergaussian, supergaussian_grad
 
 
 class SigmaTrans:
@@ -19,6 +20,46 @@ class SigmaTrans:
 
     def forward_grad(self, h, grad):
         raise NotImplementedError
+
+
+class SupergaussianLayer(tf.keras.layers.Layer):
+    def __init__(self, h=None):
+        super(SupergaussianLayer, self).__init__()
+        self.a = tf.Variable(1.0, dtype="float32", trainable=True, )
+        self.nl = tf.Variable(1.0, dtype="float32", trainable=True, )  # Log of supergaussian parameter
+        self.o = tf.Variable(0.0, dtype="float32", trainable=True, )
+        self.mu = tf.Variable(initial_value=[32., 32.], dtype="float32", trainable=True)
+        self.theta = tf.Variable([3., 0., 3.], dtype="float32", trainable=True)  # Unconstrained parameters of sigma mat
+        if h is not None:
+            self.set_h(h)
+
+    def set_h(self, h):
+        self.mu.assign([h[0], h[1]])
+        self.a.assign(h[6])
+        self.nl.assign(np.log(h[5]))
+        self.o.assign(h[7])
+        l = np.linalg.cholesky(np.array([[h[2], h[3]], [h[3], h[4]]]))
+        np.fill_diagonal(l, np.log(np.abs(np.diag(l))))
+        self.theta.assign(l[np.tril_indices(l.shape[0])])
+
+    def get_h(self):
+        l = self.sigma_chol().numpy()  # Lower cholesky factor of sigma matrix
+        return np.concatenate([
+            self.mu.numpy(),
+            (l @ l.T)[np.triu_indices(l.shape[0])],
+            [np.exp(self.nl.numpy())],
+            [self.a.numpy()],
+            [self.o.numpy()]
+        ])
+
+    def sigma_chol(self):  # Returns cholesky factorization of sigma (lower triangle)
+        l = tf.sparse.to_dense(tf.sparse.SparseTensor(indices=list(
+            zip(*np.tril_indices(2))), values=self.theta, dense_shape=(2, 2)))
+        return tf.linalg.set_diag(l, tf.exp(tf.linalg.diag_part(l)))
+
+    def call(self, inputs):
+        z = tf.linalg.triangular_solve(self.sigma_chol(), tf.transpose(inputs - self.mu))
+        return self.a * tf.exp(-tf.math.pow(tf.reduce_sum(z * z, 0) / 2., tf.exp(self.nl))) + self.o
 
 
 class SuperGaussian(AnalysisMethod):
@@ -41,81 +82,16 @@ class SuperGaussian(AnalysisMethod):
 
         # Get the x and y data for the fit
         m, n = np.mgrid[:image.shape[0], :image.shape[1]]
-        x = np.vstack((m[~image.mask], n[~image.mask]))
+        x = np.vstack((m[~image.mask], n[~image.mask])).T
         y = np.array(image[~image.mask])
 
-        # Setup the fitting functions
-        def h_to_theta(h):
-            # Break out the variables
-            mu = h[:2]
-            sigma = np.array([[h[2], h[3]], [h[3], h[4]]])
-            n = h[5]
-            a = h[6]
-            o = h[7]
-
-            # Transform parameters
-            st = self.sig_param.forward(sigma)  # The sigma parameterization
-            nt = np.log(n)  # n is positive
-            return np.array([mu[0], mu[1], st[0], st[1], st[2], nt, a, o])
-
-        def theta_to_h(theta):
-            # Break out the variables
-            mu = theta[:2]
-            st = theta[2:5]
-            nt = theta[5]
-            a = theta[6]
-            o = theta[7]
-
-            # Transform sigma and n back
-            sigma = self.sig_param.reverse(st)
-            n = np.exp(nt)
-            return np.array([mu[0], mu[1], sigma[0, 0], sigma[0, 1], sigma[1, 1], n, a, o])
-
-        def theta_to_h_grad(theta):
-            # Break out the parameters
-            st = theta[2:5]
-            nt = theta[5]
-
-            # Construct the jacobian
-            j = np.identity(8)
-            j[2:5, 2:5] = self.sig_param.reverse_grad(st)  # Add the sigma parameterization gradient
-            j[5, 5] = np.exp(nt)
-            return j
-
-        def fitfun(xdata, *theta):
-            return supergaussian(xdata[0], xdata[1], *theta_to_h(theta))
-
-        def fitfun_grad(xdata, *theta):
-            jacf = theta_to_h_grad(theta)
-            jacg = supergaussian_grad(xdata[0], xdata[1], *theta_to_h(theta))
-            return jacg @ jacf  # Chain rule
-
-        if image_sigmas is None:
-            theta_opt, theta_c = opt.curve_fit(fitfun, x, y, h_to_theta(self.predfun.fit(image).h), jac=fitfun_grad,
-                                         maxfev=self.maxfev)
-        else:
-            sigma = image_sigmas[~image.mask]/(hi - lo)
-            theta_opt, theta_c = opt.curve_fit(fitfun, x, y, h_to_theta(self.predfun.fit(image).h), sigma=sigma,
-                                               jac=fitfun_grad, absolute_sigma=True, maxfev=self.maxfev)
-        h_opt = theta_to_h(theta_opt)
-        j = theta_to_h_grad(theta_opt)
-        h_c = j @ theta_c @ j.T
-
-        # Transform c according to normalization
-        j_norm = np.identity(8)
-        j_norm[6, 6] = (hi - lo)
-        j_norm[7, 7] = (hi - lo)
-        h_c = j_norm @ h_c @ j_norm.T
+        # Construct and fit the supergaussian model
+        model = tf.keras.Sequential([SupergaussianLayer(self.predfun.fit(image).h)])
+        model.compile(loss=tf.keras.losses.MSE, optimizer=tf.keras.optimizers.Adam(learning_rate=0.05))
+        model.fit(x.astype(np.float32), y.astype(np.float32), epochs=16, batch_size=10000, verbose=0)
 
         # Return the fit and the covariance variance matrix
-        return SuperGaussianResult(
-            mu=np.array([h_opt[0], h_opt[1]]),
-            sigma=np.array([[h_opt[2], h_opt[3]], [h_opt[3], h_opt[4]]]),
-            n=h_opt[5],
-            a=h_opt[6]*(hi - lo),
-            o=h_opt[7]*(hi - lo) + lo,
-            c=h_c
-        )
+        return SuperGaussianResult(h=model.get_layer(index=0).get_h())
 
     def __get_config_dict__(self):
         return {'predfun': type(self.predfun).__name__, 'predfun_args': self.predfun_args,
