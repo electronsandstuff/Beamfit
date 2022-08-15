@@ -20,7 +20,7 @@ ext_modules = [setuptools.Extension('gaussufunc', sources=['src/gaussian.c'],)]
 # Write out the pacakge metadata
 metadata = dict(
         name='beamfit',
-        version='1.12',
+        version='1.13',
         description='Robust laser and charged particle beam image analysis',
         author='Christopher M. Pierce',
         author_email='contact@chris-pierce.com',
@@ -29,7 +29,8 @@ metadata = dict(
         install_requires=[
           'numpy',
           'matplotlib',
-          'scipy'
+          'scipy',
+          'tensorflow',
         ],
         setup_requires=['numpy'],
         package_data={'': ['tests/test_data.pickle']},
@@ -37,9 +38,6 @@ metadata = dict(
         license='GNU Affero General Public License v3 or later (AGPLv3+)',
         classifiers=[
           "Programming Language :: Python :: 3",
-          "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
-          "Development Status :: 4 - Beta",
-          "Operating System :: OS Independent",
         ],
         ext_modules=ext_modules,
         cmdclass={'build_ext': BuildExt}
