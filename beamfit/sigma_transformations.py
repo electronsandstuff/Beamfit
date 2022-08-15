@@ -6,13 +6,20 @@ import numpy as np
 import tensorflow as tf
 
 
+def is_tf(x):
+    """
+    Detects if x is a tensorflow object
+    """
+    return isinstance(x, tf.Variable) or isinstance(x, tf.Tensor)
+
+
 def eigen2d(s):
-    sqrt, atan2 = (tf.sqrt, tf.atan2) if isinstance(s, tf.Variable) else (np.sqrt, np.arctan2)
+    sqrt, atan2 = (tf.sqrt, tf.atan2) if is_tf(s) else (np.sqrt, np.arctan2)
     delta = sqrt(4 * s[1] ** 2 + (s[0] - s[2]) ** 2)
     lmbda1 = (s[0] + s[2] - delta)/2
     lmbda2 = (s[0] + s[2] + delta)/2
     theta = atan2(s[1], lmbda1 - s[2])
-    return tf.concat([theta, lmbda1, lmbda2], 0) if isinstance(s, tf.Variable) else np.array([theta, lmbda1, lmbda2])
+    return tf.stack([theta, lmbda1, lmbda2]) if is_tf(s) else np.array([theta, lmbda1, lmbda2])
 
 
 def eigen2d_grad(s, mindelta=1e-100):
@@ -39,12 +46,12 @@ def eigen2d_grad(s, mindelta=1e-100):
 
 
 def rot_mat_2d(t):
-    c, s = (tf.cos(t), tf.sin(t)) if isinstance(t, tf.Variable) else (np.cos(t), np.sin(t))
-    return tf.reshape(tf.concat([c, s, -s, c], 0), 2*[2]) if isinstance(t, tf.Variable) else np.array([[c, s], [-s, c]])
+    c, s = (tf.cos(t), tf.sin(t)) if is_tf(t) else (np.cos(t), np.sin(t))
+    return tf.reshape(tf.stack([c, s, -s, c]), 2*[2]) if is_tf(t) else np.array([[c, s], [-s, c]])
 
 
 def a_to_theta(a):
-    b = tf.exp(a) if isinstance(a, tf.Variable) else np.exp(a)
+    b = tf.exp(a) if is_tf(a) else np.exp(a)
     return np.pi * b / (1 + b)
 
 
@@ -85,9 +92,8 @@ class Cholesky(SigmaParameterization):
         return np.array([a, b, c])
 
     def reverse_l(self, st):
-        if isinstance(st, tf.Variable):
-            return tf.sparse.to_dense(tf.sparse.SparseTensor(list(zip(*np.tril_indices(2))), st, (2, 2)))
-        return np.array([[st[0], 0], [st[1], st[2]]])
+        xp = tf if is_tf(st) else np
+        return xp.reshape(xp.stack([st[0], 0.0, st[1], st[2]]), (2, 2))
 
     def reverse_grad(self, st):
         return np.array([[2*st[0], 0, 0], [st[1], st[0], 0], [0, 2*st[1], 2*st[2]]])
@@ -102,10 +108,8 @@ class LogCholesky(SigmaParameterization):
         return np.array([np.log(st[0]), st[1], np.log(st[2])])
 
     def reverse_l(self, st):
-        if isinstance(st, tf.Variable):
-            l = self.ch.reverse_l(st)
-            return tf.linalg.set_diag(l, tf.exp(tf.linalg.diag_part(l)))
-        return self.ch.reverse_l(np.array([np.exp(st[0]), st[1], np.exp(st[2])]))
+        xp = tf if is_tf(st) else np
+        return self.ch.reverse_l(xp.stack([xp.exp(st[0]), st[1], xp.exp(st[2])]))
 
     def reverse_grad(self, st):
         jf = np.array([[np.exp(st[0]), 0, 0], [0, 1, 0], [0, 0, np.exp(st[2])]])
@@ -122,12 +126,9 @@ class Spherical(SigmaParameterization):
         return np.array([np.log(st[0]), np.log(st[1]**2 + st[2]**2)/2, np.log(theta/(np.pi - theta))])
 
     def reverse_l(self, st):
-        theta = a_to_theta(st[2])
-        if isinstance(st, tf.Variable):
-            return tf.sparse.to_dense(tf.sparse.SparseTensor(list(zip(*np.tril_indices(2))),
-                                                             [tf.exp(st[0]), tf.cos(theta)*tf.exp(st[1]),
-                                                              tf.sin(theta)*tf.exp(st[1])], (2, 2)))
-        return np.array([[np.exp(st[0]), 0.0], [np.cos(theta)*np.exp(st[1]), np.sin(theta)*np.exp(st[1])]])
+        th = a_to_theta(st[2])
+        xp = tf if is_tf(st) else np
+        return xp.reshape(xp.stack([xp.exp(st[0]), 0.0, xp.cos(th)*xp.exp(st[1]), xp.sin(th)*xp.exp(st[1])]), (2, 2))
 
     def reverse_grad(self, st):
         theta = a_to_theta(st[2])
@@ -151,10 +152,10 @@ class MatrixLogarithm(SigmaParameterization):
         return (u.T @ np.diag(np.log([v1, v2])) @ u)[np.triu_indices(2)]
 
     def reverse_l(self, st):
-        theta, v1, v2 = eigen2d(st)
-        u = rot_mat_2d(theta)
-        d, s, e = (np.diag, np.sqrt, np.exp) if isinstance(st, tf.Variable) else (tf.linalg.diag, tf.sqrt, tf.exp)
-        return u.T @ d(s(e([v1, v2])))
+        eigs = eigen2d(st)
+        u = rot_mat_2d(eigs[0])
+        diag, xp = (tf.linalg.diag, tf) if is_tf(st) else (np.diag, np)
+        return xp.transpose(u) @ diag(xp.sqrt(xp.exp([eigs[1], eigs[2]])))
 
     def reverse_grad(self, st):
         theta, v1, v2 = eigen2d(st)
@@ -182,10 +183,10 @@ class Givens(SigmaParameterization):
         return np.array([np.log(v1), np.log(v2 - v1), np.log(theta/(np.pi - theta))])
 
     def reverse_l(self, st):
-        exp, sqrt, d = (tf.exp, tf.sqrt, tf.linalg.diag) if isinstance(st, tf.Variable) else (np.exp, np.sqrt, np.diag)
+        diag, xp = (tf.linalg.diag, tf) if is_tf(st) else (np.diag, np)
         u = rot_mat_2d(a_to_theta(st[2]))
-        v = [exp(st[0]), exp(st[0]) + exp(st[1])]
-        return u.T @ sqrt(d(v))
+        v = [xp.exp(st[0]), xp.exp(st[0]) + xp.exp(st[1])]
+        return xp.transpose(u) @ xp.sqrt(diag(v))
 
     def reverse_grad(self, st):
         theta = a_to_theta(st[2])

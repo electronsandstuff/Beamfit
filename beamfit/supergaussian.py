@@ -6,30 +6,18 @@ import tensorflow as tf
 
 from . import factory
 from .utils import AnalysisMethod, SuperGaussianResult, Setting
-
-
-class SigmaTrans:
-    def __init__(self):
-        pass
-
-    def forward(self, h):
-        raise NotImplementedError
-
-    def reverse(self, h):
-        raise NotImplementedError
-
-    def forward_grad(self, h, grad):
-        raise NotImplementedError
+from .sigma_transformations import LogCholesky
 
 
 class SupergaussianLayer(tf.keras.layers.Layer):
-    def __init__(self, h=None):
+    def __init__(self, h=None, sig_param=LogCholesky()):
         super(SupergaussianLayer, self).__init__()
         self.a = tf.Variable(1.0, dtype="float32", trainable=True, )
         self.nl = tf.Variable(1.0, dtype="float32", trainable=True, )  # Log of supergaussian parameter
         self.o = tf.Variable(0.0, dtype="float32", trainable=True, )
         self.mu = tf.Variable(initial_value=[32., 32.], dtype="float32", trainable=True)
         self.theta = tf.Variable([3., 0., 3.], dtype="float32", trainable=True)  # Unconstrained parameters of sigma mat
+        self.sp = sig_param
         if h is not None:
             self.set_h(h)
 
@@ -38,27 +26,19 @@ class SupergaussianLayer(tf.keras.layers.Layer):
         self.a.assign(h[6])
         self.nl.assign(np.log(h[5]))
         self.o.assign(h[7])
-        l = np.linalg.cholesky(np.array([[h[2], h[3]], [h[3], h[4]]]))
-        np.fill_diagonal(l, np.log(np.abs(np.diag(l))))
-        self.theta.assign(l[np.tril_indices(l.shape[0])])
+        self.theta.assign(self.sp.forward(np.array([[h[2], h[3]], [h[3], h[4]]])))
 
     def get_h(self):
-        l = self.sigma_chol().numpy()  # Lower cholesky factor of sigma matrix
         return np.concatenate([
             self.mu.numpy(),
-            (l @ l.T)[np.triu_indices(l.shape[0])],
+            self.sp.reverse(self.theta).numpy()[np.triu_indices(2)],
             [np.exp(self.nl.numpy())],
             [self.a.numpy()],
             [self.o.numpy()]
         ])
 
-    def sigma_chol(self):  # Returns cholesky factorization of sigma (lower triangle)
-        l = tf.sparse.to_dense(tf.sparse.SparseTensor(indices=list(
-            zip(*np.tril_indices(2))), values=self.theta, dense_shape=(2, 2)))
-        return tf.linalg.set_diag(l, tf.exp(tf.linalg.diag_part(l)))
-
     def call(self, inputs):
-        z = tf.linalg.triangular_solve(self.sigma_chol(), tf.transpose(inputs - self.mu))
+        z = tf.linalg.triangular_solve(self.sp.reverse_l(self.theta), tf.transpose(inputs - self.mu))
         return self.a * tf.exp(-tf.math.pow(tf.reduce_sum(z * z, 0) / 2., tf.exp(self.nl))) + self.o
 
 
@@ -86,7 +66,7 @@ class SuperGaussian(AnalysisMethod):
         y = np.array(image[~image.mask])
 
         # Construct and fit the supergaussian model
-        model = tf.keras.Sequential([SupergaussianLayer(self.predfun.fit(image).h)])
+        model = tf.keras.Sequential([SupergaussianLayer(self.predfun.fit(image).h, sig_param=self.sig_param)])
         model.compile(loss=tf.keras.losses.MSE, optimizer=tf.keras.optimizers.Adam(learning_rate=0.05))
         model.fit(x.astype(np.float32), y.astype(np.float32), epochs=16, batch_size=10000, verbose=0)
 
