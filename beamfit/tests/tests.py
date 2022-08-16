@@ -90,9 +90,9 @@ class TestBeamfit(unittest.TestCase):
         # Fit it and Compare
         for sp in beamfit.get_names('sig_param'):  # At least test each sigma matrix parameterization
             beamfit.SuperGaussian(sig_param=sp).fit(test_image)
-        res = beamfit.SuperGaussian().fit(test_image)
+        res = beamfit.SuperGaussian(batch_size=0.03).fit(test_image)
         np.testing.assert_allclose(res.h, valid_h, rtol=0.2)
-        res = beamfit.SuperGaussian().fit(test_image, np.ones_like(test_image))
+        res = beamfit.SuperGaussian(batch_size=0.03).fit(test_image, np.ones_like(test_image))
         np.testing.assert_allclose(res.h, valid_h, rtol=0.2)
 
     def test_supergaussian(self):
