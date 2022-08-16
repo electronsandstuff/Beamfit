@@ -10,14 +10,16 @@ from .sigma_transformations import LogCholesky
 
 
 class SupergaussianLayer(tf.keras.layers.Layer):
-    def __init__(self, h=None, sig_param=LogCholesky()):
+    def __init__(self, h=None, sig_param='LogCholesky', sig_param_args=None):
         super(SupergaussianLayer, self).__init__()
         self.a = tf.Variable(1.0, dtype="float32", trainable=True, )
         self.nl = tf.Variable(1.0, dtype="float32", trainable=True, )  # Log of supergaussian parameter
         self.o = tf.Variable(0.0, dtype="float32", trainable=True, )
         self.mu = tf.Variable(initial_value=[32., 32.], dtype="float32", trainable=True)
         self.theta = tf.Variable([3., 0., 3.], dtype="float32", trainable=True)  # Unconstrained parameters of sigma mat
-        self.sp = sig_param
+        if sig_param_args is None:
+            sig_param_args = {}
+        self.sp = factory.create('sig_param', sig_param, **sig_param_args)
         if h is not None:
             self.set_h(h)
 
@@ -42,6 +44,7 @@ class SupergaussianLayer(tf.keras.layers.Layer):
         return self.a * tf.exp(-tf.math.pow(tf.reduce_sum(z * z, 0) / 2., tf.exp(self.nl))) + self.o
 
 
+# TODO: add tensorflow options to init arguments
 class SuperGaussian(AnalysisMethod):
     def __init__(self, predfun="GaussianProfile1D", predfun_args=None, sig_param='LogCholesky', sig_param_args=None,
                  maxfev=100, **kwargs):
@@ -53,7 +56,7 @@ class SuperGaussian(AnalysisMethod):
         self.predfun = factory.create('analysis', predfun, **predfun_args)
         self.predfun_args = predfun_args
         self.maxfev = maxfev
-        self.sig_param = factory.create('sig_param', sig_param, **sig_param_args)
+        self.sig_param = sig_param
         self.sig_param_args = sig_param_args
 
     def __fit__(self, image, image_sigmas=None):
@@ -66,17 +69,18 @@ class SuperGaussian(AnalysisMethod):
         y = np.array(image[~image.mask])
 
         # Construct and fit the supergaussian model
-        model = tf.keras.Sequential([SupergaussianLayer(self.predfun.fit(image).h, sig_param=self.sig_param)])
+        s = SupergaussianLayer(self.predfun.fit(image).h, sig_param=self.sig_param, sig_param_args=self.sig_param_args)
+        model = tf.keras.Sequential([s])
         model.compile(loss=tf.keras.losses.MSE, optimizer=tf.keras.optimizers.Adam(learning_rate=0.05))
         model.fit(x.astype(np.float32), y.astype(np.float32), epochs=16, batch_size=10000, verbose=0)
 
         # Return the fit and the covariance variance matrix
-        return SuperGaussianResult(h=model.get_layer(index=0).get_h())
+        return SuperGaussianResult(h=model.get_layer(index=0).get_h())  # TODO: get covariance
 
     def __get_config_dict__(self):
         return {'predfun': type(self.predfun).__name__, 'predfun_args': self.predfun_args,
                 'sig_param': type(self.sig_param).__name__, 'sig_param_args': self.sig_param_args,
-                'maxfev': self.maxfev}
+                'maxfev': self.maxfev}  # TODO: update config dict and settings
 
     def __get_settings__(self) -> List[Setting]:
         pred_funs = [x for x in factory.get_names('analysis') if x != 'SuperGaussian']
