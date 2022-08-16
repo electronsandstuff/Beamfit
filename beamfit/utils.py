@@ -185,3 +185,29 @@ class SuperGaussianResult(AnalysisResult):
             [sigma_n_cov_scaled[0, 0], sigma_n_cov_scaled[1, 1]],
             [sigma_n_cov_scaled[1, 1], sigma_n_cov_scaled[2, 2]]
         ]))
+
+
+def supergaussian(x, y, mu_x, mu_y, sigma_xx, sigma_xy, sigma_yy, n, a, o):
+    """
+    Computes the bivariate super-Gaussian function
+      f(r) = a*exp(-(1/2(r - mu)^T Sigma^{-1} (r - mu))^n) + o
+    where r is the vector {x, y}, mu is the centroid vector {mu_x, mu_y}, and Sigma is the covariance matrix
+    {{sigma_xx, sigma_xy}, {sigma_xy, sigma_yy}}.
+
+    :param x: x value at which the super-Gaussian is evaluated at
+    :param y: y value at which the super-Gaussian is evaluated at
+    :param mu_x: x component of centroid
+    :param mu_y: y component of centroid
+    :param sigma_xx: x variance
+    :param sigma_xy: xy correlation
+    :param sigma_yy: y variance
+    :param n: super-Gaussian parameter
+    :param a: amplitude
+    :param o: offset
+    :return: np.ndarray, the values of the supergaussian
+    """
+    xy = np.vstack((np.ravel(x), np.ravel(y))).T
+    l = np.linalg.cholesky(np.array([[sigma_xx, sigma_xy], [sigma_xy, sigma_yy]]))
+    z = np.linalg.solve(l, np.transpose(xy - np.array([mu_x, mu_y])))
+    z = a * np.exp(-np.power(np.sum(z * z, 0) / 2., n)) + o
+    return np.reshape(z, x.shape)

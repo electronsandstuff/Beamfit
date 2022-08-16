@@ -108,20 +108,6 @@ class TestBeamfit(unittest.TestCase):
         # Test it
         np.testing.assert_allclose(test, valid)
 
-    def test_supergaussian_grad(self):
-        # Pull out the test data
-        X = self.test_data['gaussufunc']['X']
-        Y = self.test_data['gaussufunc']['Y']
-        h = self.test_data['gaussufunc']['h']
-        valid = self.test_data['gaussufunc']['supergaussian_grad']
-
-        # Compute the test function
-        test = beamfit.supergaussian_grad(X, Y, *h).T
-
-        # Test it
-        for t, v in zip(valid, test):
-            np.testing.assert_allclose(t, v)
-
     def test_get_mu_sigma(self):
         # Numerically find the reference values for the image
         h_test = np.array([128, 128, 50**2, 0.0, 40**2, 0.8, 1.0, 0.05])
