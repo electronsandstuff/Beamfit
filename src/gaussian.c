@@ -28,7 +28,7 @@ static PyMethodDef GaussMethods[] = {
         {NULL, NULL, 0, NULL}
 };
 
-static void double_supergaussian_internal(char **args, npy_intp *dimensions, npy_intp* steps, void* data){
+static void double_supergaussian_internal(char **args, const long *dimensions, const long* steps, void* data){
     npy_intp i,j;
     npy_intp n = dimensions[0];
     double *args_copy[11];
@@ -58,7 +58,7 @@ static void double_supergaussian_internal(char **args, npy_intp *dimensions, npy
     }
 }
 
-static void double_supergaussian_grad_internal(char **args, npy_intp *dimensions, npy_intp* steps, void* data){
+static void double_supergaussian_grad_internal(char **args, const long *dimensions, const long* steps, void* data){
   npy_intp i,j;
   npy_intp n = dimensions[0];
   double *args_copy[20];
@@ -115,7 +115,6 @@ static void double_supergaussian_grad_internal(char **args, npy_intp *dimensions
   }
 }
 
-// Pointers and argument datatypes for the functions
 PyUFuncGenericFunction funcs_gaussian[1] = {&double_supergaussian_internal};
 static char types_gaussian[11] = {NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE,
                                   NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE,
