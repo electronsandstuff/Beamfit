@@ -1,6 +1,6 @@
 import os
 import pickle
-import unittest
+import pytest
 import numpy as np
 import beamfit
 
@@ -80,114 +80,127 @@ def calc_gradient_central_difference(
     return j[1], err  # Return the Jacobian and error estimates
 
 
-class TestBeamfit(unittest.TestCase):
-    def setUp(self):
-        """Loads the data for tests"""
-        # Get our path and the path of the data file
-        this_path = os.path.dirname(__file__)
-        filename = os.path.join(this_path, "test_data.pickle")
+@pytest.fixture
+def test_data():
+    """Fixture that loads the test data for all tests"""
+    # Get our path and the path of the data file
+    this_path = os.path.dirname(__file__)
+    filename = os.path.join(this_path, "test_data.pickle")
 
-        # Load the test data
-        with open(filename, "rb") as f:
-            self.test_data = pickle.load(f)
+    # Load the test data
+    with open(filename, "rb") as f:
+        return pickle.load(f)
 
-    def test_fit_supergaussian(self):
-        # Pull out the test image and validation data
-        test_image = self.test_data["supergaussian_fit_data"]["images"][0]
-        valid_h = self.test_data["supergaussian_fit_data"]["labels"][0][0]
-        # valid_C = self.test_data["supergaussian_fit_data"]["labels"][0][1]
 
-        # Fit it and Compare
-        res = beamfit.SuperGaussian().fit(test_image)
-        # test_h, test_C = beamfit.fit_supergaussian(test_image)
-        np.testing.assert_allclose(res.h, valid_h, rtol=0.2)
-        res = beamfit.SuperGaussian().fit(test_image, np.ones_like(test_image))
-        np.testing.assert_allclose(res.h, valid_h, rtol=0.2)
+def test_fit_supergaussian(test_data):
+    # Pull out the test image and validation data
+    test_image = test_data["supergaussian_fit_data"]["images"][0]
+    valid_h = test_data["supergaussian_fit_data"]["labels"][0][0]
+    # valid_C = test_data["supergaussian_fit_data"]["labels"][0][1]
 
-    def test_supergaussian(self):
-        # Pull out the test data
-        X = self.test_data["gaussufunc"]["X"]
-        Y = self.test_data["gaussufunc"]["Y"]
-        h = self.test_data["gaussufunc"]["h"]
-        valid = self.test_data["gaussufunc"]["supergaussian"]
+    # Fit it and Compare
+    res = beamfit.SuperGaussian().fit(test_image)
+    # test_h, test_C = beamfit.fit_supergaussian(test_image)
+    np.testing.assert_allclose(res.h, valid_h, rtol=0.2)
+    res = beamfit.SuperGaussian().fit(test_image, np.ones_like(test_image))
+    np.testing.assert_allclose(res.h, valid_h, rtol=0.2)
 
-        # Compute the test function
-        test = beamfit.supergaussian(X, Y, *h)
 
-        # Test it
-        np.testing.assert_allclose(test, valid)
+def test_supergaussian(test_data):
+    # Pull out the test data
+    X = test_data["gaussufunc"]["X"]
+    Y = test_data["gaussufunc"]["Y"]
+    h = test_data["gaussufunc"]["h"]
+    valid = test_data["gaussufunc"]["supergaussian"]
 
-    def test_supergaussian_grad(self):
-        # Pull out the test data
-        X = self.test_data["gaussufunc"]["X"]
-        Y = self.test_data["gaussufunc"]["Y"]
-        h = self.test_data["gaussufunc"]["h"]
-        valid = self.test_data["gaussufunc"]["supergaussian_grad"]
+    # Compute the test function
+    test = beamfit.supergaussian(X, Y, *h)
 
-        # Compute the test function
-        test = beamfit.supergaussian_grad(X, Y, *h).T
+    # Test it
+    np.testing.assert_allclose(test, valid)
 
-        # Test it
-        for t, v in zip(valid, test):
-            np.testing.assert_allclose(t, v, atol=1e-9)
 
-    def test_get_mu_sigma(self):
-        # Numerically find the reference values for the image
-        h_test = np.array([128, 128, 50**2, 0.0, 40**2, 0.8, 1.0, 0.05])
-        mu_ref, sigma_ref = get_mu_sigma_numerical(h_test)
+def test_supergaussian_grad(test_data):
+    # Pull out the test data
+    X = test_data["gaussufunc"]["X"]
+    Y = test_data["gaussufunc"]["Y"]
+    h = test_data["gaussufunc"]["h"]
+    valid = test_data["gaussufunc"]["supergaussian_grad"]
 
-        # Find the test values from the library
-        mu_test, sigma_test = beamfit.get_mu_sigma(h_test, 1.0)
+    # Compute the test function
+    test = beamfit.supergaussian_grad(X, Y, *h).T
 
-        # Compare them
-        np.testing.assert_allclose(mu_test, mu_ref, atol=1e-9)
-        np.testing.assert_allclose(sigma_test, sigma_ref, atol=1e-9)
+    # Test it
+    for t, v in zip(valid, test):
+        np.testing.assert_allclose(t, v, atol=1e-9)
 
-    def internal_gaussian_test(self, p):
-        h_refs = [
-            np.array([128, 256, 32**2, 0.0, 8**2, 1, 1.0, 0.06]),
-            np.array([115, 345, 32**2, 0.0, 16**2, 1, 10.0, 0.15]),
-            np.array([132, 375, 16**2, 0.0, 16**2, 1, 432.0, -23]),
-            np.array([142, 128, 25**2, 0.0, 19**2, 1, 253.0, 432]),
-        ]
 
-        for h_ref in h_refs:
-            # Generate the image
-            X, Y = np.mgrid[:256, :512]
-            sg = beamfit.supergaussian(X, Y, *h_ref)
-            np.testing.assert_allclose(p.fit(sg).h, h_ref, rtol=0.005, atol=1e-6)
+def test_get_mu_sigma():
+    # Numerically find the reference values for the image
+    h_test = np.array([128, 128, 50**2, 0.0, 40**2, 0.8, 1.0, 0.05])
+    mu_ref, sigma_ref = get_mu_sigma_numerical(h_test)
 
-    def test_gaussian_profile_1d(self):
-        self.internal_gaussian_test(beamfit.GaussianProfile1D())
+    # Find the test values from the library
+    mu_test, sigma_test = beamfit.get_mu_sigma(h_test, 1.0)
 
-    def test_gaussian_linear_least_squares(self):
-        self.internal_gaussian_test(beamfit.GaussianLinearLeastSquares())
+    # Compare them
+    np.testing.assert_allclose(mu_test, mu_ref, atol=1e-9)
+    np.testing.assert_allclose(sigma_test, sigma_ref, atol=1e-9)
 
-    def test_rms_integration(self):
-        self.internal_gaussian_test(beamfit.RMSIntegration())
 
-    def test_supergaussian_scaling_grad(self):
-        for x0 in [0.5, 0.75, 1.0, 1.25, 1.5]:
-            j, _ = calc_gradient_central_difference(
-                beamfit.super_gaussian_scaling_factor,
-                x0=np.array([x0]),
-                fn_type="scalar",
-            )
-            np.testing.assert_allclose(
-                beamfit.super_gaussian_scaling_factor_grad(x0), j, atol=1e-9
-            )
+@pytest.mark.parametrize(
+    "profile_class",
+    [
+        beamfit.GaussianProfile1D,
+        beamfit.GaussianLinearLeastSquares,
+        beamfit.RMSIntegration,
+    ],
+)
+@pytest.mark.parametrize(
+    "h_ref",
+    [
+        np.array([128, 256, 32**2, 0.0, 8**2, 1, 1.0, 0.06]),
+        np.array([115, 345, 32**2, 0.0, 16**2, 1, 10.0, 0.15]),
+        np.array([132, 375, 16**2, 0.0, 16**2, 1, 432.0, -23]),
+        np.array([142, 128, 25**2, 0.0, 19**2, 1, 253.0, 432]),
+    ],
+)
+def test_gaussian_profiles(profile_class, h_ref):
+    """Test Gaussian profile fitting with various parameter sets"""
+    # Generate the image
+    X, Y = np.mgrid[:256, :512]
+    sg = beamfit.supergaussian(X, Y, *h_ref)
 
-    def test_gaussian_linear_least_squares_trans_grad(self):
-        x0s = [
-            np.array([1, 1, 1, 1, 1, 1, 1, 0]),
-            np.array([1, 2, 3, 4, 5, 6, 1, 0]),
-            np.array([6, 5, 4, 3, 2, 1, 1, 0]),
-            np.array([6, 5, 4, 4, 5, 6, 1, 0]),
-        ]
-        for x0 in x0s:
-            j, _ = calc_gradient_central_difference(
-                beamfit.gaussian_lls_trans, x0=x0, fn_type="vector"
-            )
-            np.testing.assert_allclose(
-                beamfit.gaussian_lls_trans_grad(x0), j, atol=1e-10
-            )
+    # Create profile instance and test fitting
+    profile = profile_class()
+    np.testing.assert_allclose(profile.fit(sg).h, h_ref, rtol=0.005, atol=1e-6)
+
+
+@pytest.mark.parametrize("x0", [0.5, 0.75, 1.0, 1.25, 1.5])
+def test_supergaussian_scaling_grad(x0):
+    """Test supergaussian scaling gradient for various x0 values"""
+    j, _ = calc_gradient_central_difference(
+        beamfit.super_gaussian_scaling_factor,
+        x0=np.array([x0]),
+        fn_type="scalar",
+    )
+    np.testing.assert_allclose(
+        beamfit.super_gaussian_scaling_factor_grad(x0), j, atol=1e-9
+    )
+
+
+@pytest.mark.parametrize(
+    "x0",
+    [
+        np.array([1, 1, 1, 1, 1, 1, 1, 0]),
+        np.array([1, 2, 3, 4, 5, 6, 1, 0]),
+        np.array([6, 5, 4, 3, 2, 1, 1, 0]),
+        np.array([6, 5, 4, 4, 5, 6, 1, 0]),
+    ],
+)
+def test_gaussian_linear_least_squares_trans_grad(x0):
+    """Test Gaussian linear least squares transformation gradient for various x0 values"""
+    j, _ = calc_gradient_central_difference(
+        beamfit.gaussian_lls_trans, x0=x0, fn_type="vector"
+    )
+    np.testing.assert_allclose(beamfit.gaussian_lls_trans_grad(x0), j, atol=1e-10)

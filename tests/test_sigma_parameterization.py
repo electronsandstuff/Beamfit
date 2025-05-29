@@ -1,4 +1,4 @@
-import unittest
+import pytest
 import numpy as np
 import beamfit
 
@@ -49,78 +49,99 @@ def calc_gradient_central_difference(
     return j[1], err  # Return the Jacobian and error estimates
 
 
-class TestSigmaParameterization(unittest.TestCase):
-    def setUp(self):
-        self.matrices = [
-            np.identity(2),
-            np.array([[1, 2], [2, 5]]),
-            np.array([[100, 1], [1, 0.1]]),
-        ]
-        self.m = np.array([[1, 1], [1, 5]])  # Example from paper I am following
-        self.ps = [
-            beamfit.Cholesky(),
-            beamfit.LogCholesky(),
-            beamfit.Spherical(),
-            beamfit.MatrixLogarithm(),
-            beamfit.Givens(),
-        ]
+@pytest.fixture
+def example_matrix():
+    """Fixture providing the example matrix from paper."""
+    return np.array([[1, 1], [1, 5]])
 
-    def test_inverses(self):
-        """Make sure all parameterizations have a valid inverse"""
-        for p in self.ps:
-            for m in self.matrices:
-                try:
-                    np.testing.assert_allclose(p.reverse(p.forward(m)), m, atol=1e-9)
-                except:
-                    print(f"Failed at {p}")
-                    raise
 
-    def test_cholesky(self):
-        np.testing.assert_allclose(
-            beamfit.Cholesky().forward(self.m), np.array([1, 1, 2]), atol=1e-9
-        )
+@pytest.fixture
+def test_point():
+    """Fixture providing test point for gradient tests."""
+    return np.array([2, 3, 5])
 
-    def test_log_cholesky(self):
-        np.testing.assert_allclose(
-            beamfit.LogCholesky().forward(self.m),
-            np.array([0, 1, np.log(2)]),
-            atol=1e-9,
-        )
 
-    def test_spherical(self):
-        np.testing.assert_allclose(
-            beamfit.Spherical().forward(self.m),
-            np.array([0, np.log(5) / 2, -0.608]),
-            rtol=1e-3,
-        )
+# Parameterization data for gradient tests
+GRADIENT_TEST_PARAMS = [
+    (beamfit.Cholesky(), 1.0),
+    (beamfit.LogCholesky(), 1e-4),
+    (beamfit.Spherical(), 1e-4),
+    (beamfit.MatrixLogarithm(), 1e-4),
+    (beamfit.Givens(), 1e-4),
+]
 
-    def test_grads_numerical(self):
-        x0 = np.array([2, 3, 5])
-        hs = np.ones(100) * 1e-4
-        hs[0] = 1.0  # Manually set h values for specific parameterizations
+# Test matrices for inverse tests
+TEST_MATRICES = [
+    np.identity(2),
+    np.array([[1, 2], [2, 5]]),
+    np.array([[100, 1], [1, 0.1]]),
+]
 
-        for p, h in zip(self.ps, hs):
-            try:
-                j, err = calc_gradient_central_difference(p.reverse, x0=x0, h=h)
-                # Next line gives estimate of relative truncation error, but doesn't include roundoff error. Try to
-                # select the largest h such that the error is like 1e-9.
-                # print(err)
-                self.assertTrue(
-                    (err[np.isfinite(err)] < 1e-6).all()
-                )  # If it fails here, need to make h smaller
-                j_actual = p.reverse_grad(x0)
-                np.testing.assert_allclose(j_actual, j, atol=1e-8, rtol=1e-5)
-            except:
-                print(f"Failed at {p}")
-                raise
+# Parameterizations for inverse tests
+PARAMETERIZATIONS = [
+    beamfit.Cholesky(),
+    beamfit.LogCholesky(),
+    beamfit.Spherical(),
+    beamfit.MatrixLogarithm(),
+    beamfit.Givens(),
+]
 
-    def test_eigen2d_grad_numerical(self):
-        x0 = np.array([2, 3, 5])
 
-        def rev(s):
-            a = beamfit.eigen2d(s)
-            return np.array([[a[0], a[1]], [a[1], a[2]]])
+@pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
+@pytest.mark.parametrize("test_matrix", TEST_MATRICES)
+def test_inverses(parameterization, test_matrix):
+    """Make sure parameterization has a valid inverse for given matrix."""
+    np.testing.assert_allclose(
+        parameterization.reverse(parameterization.forward(test_matrix)),
+        test_matrix,
+        atol=1e-9,
+    )
 
-        j, err = calc_gradient_central_difference(rev, x0=x0, h=1e-4)
-        j_actual = beamfit.eigen2d_grad(x0)
-        np.testing.assert_allclose(j_actual, j, atol=1e-8, rtol=1e-5)
+
+def test_cholesky(example_matrix):
+    """Test Cholesky parameterization forward transform."""
+    result = beamfit.Cholesky().forward(example_matrix)
+    expected = np.array([1, 1, 2])
+    np.testing.assert_allclose(result, expected, atol=1e-9)
+
+
+def test_log_cholesky(example_matrix):
+    """Test LogCholesky parameterization forward transform."""
+    result = beamfit.LogCholesky().forward(example_matrix)
+    expected = np.array([0, 1, np.log(2)])
+    np.testing.assert_allclose(result, expected, atol=1e-9)
+
+
+def test_spherical(example_matrix):
+    """Test Spherical parameterization forward transform."""
+    result = beamfit.Spherical().forward(example_matrix)
+    expected = np.array([0, np.log(5) / 2, -0.608])
+    np.testing.assert_allclose(result, expected, rtol=1e-3)
+
+
+@pytest.mark.parametrize("parameterization,h_value", GRADIENT_TEST_PARAMS)
+def test_grads_numerical(parameterization, h_value, test_point):
+    """Test numerical gradients for parameterization."""
+    j, err = calc_gradient_central_difference(
+        parameterization.reverse, x0=test_point, h=h_value
+    )
+    # Next line gives estimate of relative truncation error, but doesn't include roundoff error. Try to
+    # select the largest h such that the error is like 1e-9.
+    # print(err)
+    assert (
+        err[np.isfinite(err)] < 1e-6
+    ).all(), f"Error too large for {parameterization} - need to make h smaller"
+    j_actual = parameterization.reverse_grad(test_point)
+    np.testing.assert_allclose(j_actual, j, atol=1e-8, rtol=1e-5)
+
+
+def test_eigen2d_grad_numerical(test_point):
+    """Test numerical gradient for eigen2d function."""
+
+    def rev(s):
+        a = beamfit.eigen2d(s)
+        return np.array([[a[0], a[1]], [a[1], a[2]]])
+
+    j, err = calc_gradient_central_difference(rev, x0=test_point, h=1e-4)
+    j_actual = beamfit.eigen2d_grad(test_point)
+    np.testing.assert_allclose(j_actual, j, atol=1e-8, rtol=1e-5)
