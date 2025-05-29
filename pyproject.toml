@@ -33,6 +33,3 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 # Will find packages automatically
-
-[tool.setuptools.package-data]
-"*" = ["tests/test_data.pickle"]

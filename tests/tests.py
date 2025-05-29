@@ -251,7 +251,9 @@ class TestSigmaParameterization(unittest.TestCase):
 
     def test_log_cholesky(self):
         np.testing.assert_allclose(
-            beamfit.LogCholesky().forward(self.m), np.array([0, 1, np.log(2)]), atol=1e-9
+            beamfit.LogCholesky().forward(self.m),
+            np.array([0, 1, np.log(2)]),
+            atol=1e-9,
         )
 
     def test_spherical(self):
