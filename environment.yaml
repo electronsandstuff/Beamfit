@@ -16,3 +16,4 @@ dependencies:
   - gfortran_linux-64  # Linux (for scipy/numpy deps)
   - pytest
   - pytest-cov
+  - pre-commit
