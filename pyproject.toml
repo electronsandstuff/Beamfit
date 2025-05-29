@@ -36,8 +36,3 @@ include-package-data = true
 
 [tool.setuptools.package-data]
 "*" = ["tests/test_data.pickle"]
-
-# C Extension configuration
-[[tool.setuptools.ext-modules]]
-name = "gaussufunc"
-sources = ["src/gaussian.c"]
