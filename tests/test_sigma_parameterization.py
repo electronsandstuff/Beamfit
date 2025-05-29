@@ -128,9 +128,9 @@ def test_grads_numerical(parameterization, h_value, test_point):
     # Next line gives estimate of relative truncation error, but doesn't include roundoff error. Try to
     # select the largest h such that the error is like 1e-9.
     # print(err)
-    assert (
-        err[np.isfinite(err)] < 1e-6
-    ).all(), f"Error too large for {parameterization} - need to make h smaller"
+    assert (err[np.isfinite(err)] < 1e-6).all(), (
+        f"Error too large for {parameterization} - need to make h smaller"
+    )
     j_actual = parameterization.reverse_grad(test_point)
     np.testing.assert_allclose(j_actual, j, atol=1e-8, rtol=1e-5)
 
