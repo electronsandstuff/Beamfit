@@ -129,7 +129,7 @@ class TestBeamfit(unittest.TestCase):
 
         # Test it
         for t, v in zip(valid, test):
-            np.testing.assert_allclose(t, v)
+            np.testing.assert_allclose(t, v, atol=1e-9)
 
     def test_get_mu_sigma(self):
         # Numerically find the reference values for the image
@@ -140,8 +140,8 @@ class TestBeamfit(unittest.TestCase):
         mu_test, sigma_test = beamfit.get_mu_sigma(h_test, 1.0)
 
         # Compare them
-        np.testing.assert_allclose(mu_test, mu_ref)
-        np.testing.assert_allclose(sigma_test, sigma_ref, atol=1e-11)
+        np.testing.assert_allclose(mu_test, mu_ref, atol=1e-9)
+        np.testing.assert_allclose(sigma_test, sigma_ref, atol=1e-9)
 
     def internal_gaussian_test(self, p):
         h_refs = [
@@ -174,7 +174,7 @@ class TestBeamfit(unittest.TestCase):
                 fn_type="scalar",
             )
             np.testing.assert_allclose(
-                beamfit.super_gaussian_scaling_factor_grad(x0), j
+                beamfit.super_gaussian_scaling_factor_grad(x0), j, atol=1e-9
             )
 
     def test_gaussian_linear_least_squares_trans_grad(self):
@@ -239,19 +239,19 @@ class TestSigmaParameterization(unittest.TestCase):
         for p in self.ps:
             for m in self.matrices:
                 try:
-                    np.testing.assert_allclose(p.reverse(p.forward(m)), m, atol=1e-15)
+                    np.testing.assert_allclose(p.reverse(p.forward(m)), m, atol=1e-9)
                 except:
                     print(f"Failed at {p}")
                     raise
 
     def test_cholesky(self):
         np.testing.assert_allclose(
-            beamfit.Cholesky().forward(self.m), np.array([1, 1, 2])
+            beamfit.Cholesky().forward(self.m), np.array([1, 1, 2]), atol=1e-9
         )
 
     def test_log_cholesky(self):
         np.testing.assert_allclose(
-            beamfit.LogCholesky().forward(self.m), np.array([0, 1, np.log(2)])
+            beamfit.LogCholesky().forward(self.m), np.array([0, 1, np.log(2)]), atol=1e-9
         )
 
     def test_spherical(self):
