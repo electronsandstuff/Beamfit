@@ -37,6 +37,6 @@ jobs:
       run: |
         "## Pytest Results`n`n" | Add-Content -Path $env:GITHUB_STEP_SUMMARY
         "``````" | Add-Content -Path $env:GITHUB_STEP_SUMMARY
-        $output = pytest -v --cov=beamfit/ tests 2>&1
+        $output = pytest -v tests 2>&1
         $output | Add-Content -Path $env:GITHUB_STEP_SUMMARY
         "``````" | Add-Content -Path $env:GITHUB_STEP_SUMMARY
