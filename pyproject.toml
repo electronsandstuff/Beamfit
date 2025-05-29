@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=64", "wheel", "numpy"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beamfit"
+version = "1.12"
+description = "Robust laser and charged particle beam image analysis"
+authors = [
+    {name = "Christopher M. Pierce", email = "contact@chris-pierce.com"}
+]
+license = {text = "GNU Affero General Public License v3 or later (AGPLv3+)"}
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Development Status :: 4 - Beta",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+    "matplotlib", 
+    "scipy"
+]
+
+[project.urls]
+Homepage = "https://github.com/electronsandstuff/Beamfit"
+Repository = "https://github.com/electronsandstuff/Beamfit"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+# Will find packages automatically
+
+[tool.setuptools.package-data]
+"*" = ["tests/test_data.pickle"]
+
+# C Extension configuration
+[[tool.setuptools.ext-modules]]
+name = "gaussufunc"
+sources = ["src/gaussian.c"]
