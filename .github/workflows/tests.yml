@@ -22,7 +22,11 @@ jobs:
     - name: Install package and dependencies
       run: |
         pip install --upgrade pip
+        pip install pytest pytest-cov
         pip install .
     - name: Run the tests
       run: |
-        python -m unittest tests
+        echo -e '## Pytest Results\n\n' >> "$GITHUB_STEP_SUMMARY"
+        echo -e '```' >> "$GITHUB_STEP_SUMMARY"
+        pytest -v -cov=beamfit/ 2>&1 tests | tee -a "$GITHUB_STEP_SUMMARY"
+        echo -e '```' >> "$GITHUB_STEP_SUMMARY"
