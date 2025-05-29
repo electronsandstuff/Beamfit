@@ -24,9 +24,19 @@ jobs:
         pip install --upgrade pip
         pip install pytest pytest-cov
         pip install .
-    - name: Run the tests
+    - name: Run the tests (Linux/macOS)
+      if: runner.os != 'Windows'
       run: |
         echo -e '## Pytest Results\n\n' >> "$GITHUB_STEP_SUMMARY"
         echo -e '```' >> "$GITHUB_STEP_SUMMARY"
-        pytest -v -cov=beamfit/ 2>&1 tests | tee -a "$GITHUB_STEP_SUMMARY"
+        pytest -v --cov=beamfit/ tests 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
         echo -e '```' >> "$GITHUB_STEP_SUMMARY"
+    - name: Run the tests (Windows)
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        "## Pytest Results`n`n" | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+        "``````" | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+        $output = pytest -v --cov=beamfit/ tests 2>&1
+        $output | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+        "``````" | Add-Content -Path $env:GITHUB_STEP_SUMMARY
