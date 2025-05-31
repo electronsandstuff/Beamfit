@@ -23,7 +23,9 @@ def supergaussian(x, y, mu_x, mu_y, sigma_xx, sigma_xy, sigma_yy, n, a, o):
     :param o: offset
     :return: np.ndarray, the values of the supergaussian
     """
-    return supergaussian_internal(x, y, mu_x, mu_y, sigma_xx, sigma_xy, sigma_yy, n, a, o)
+    return supergaussian_internal(
+        x, y, mu_x, mu_y, sigma_xx, sigma_xy, sigma_yy, n, a, o
+    )
 
 
 def supergaussian_grad(x, y, mu_x, mu_y, sigma_xx, sigma_xy, sigma_yy, n, a, o):
@@ -42,4 +44,8 @@ def supergaussian_grad(x, y, mu_x, mu_y, sigma_xx, sigma_xy, sigma_yy, n, a, o):
     :param o: offset
     :return: (m, 8) np.ndarray, the Jacobian of the supergaussian WRT to all parameters
     """
-    return np.array(supergaussian_grad_internal(x, y, mu_x, mu_y, sigma_xx, sigma_xy, sigma_yy, n, a, o)).T
+    return np.array(
+        supergaussian_grad_internal(
+            x, y, mu_x, mu_y, sigma_xx, sigma_xy, sigma_yy, n, a, o
+        )
+    ).T

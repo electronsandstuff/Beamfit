@@ -1,0 +1,42 @@
+name: Run python tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  test:
+    name: Test (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "macos-latest"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install package and dependencies
+      run: |
+        pip install --upgrade pip
+        pip install pytest pytest-cov
+        pip install .
+    - name: Run the tests (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        echo -e '## Pytest Results\n\n' >> "$GITHUB_STEP_SUMMARY"
+        echo -e '```' >> "$GITHUB_STEP_SUMMARY"
+        pytest -v --cov=beamfit/ tests 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+        echo -e '```' >> "$GITHUB_STEP_SUMMARY"
+    - name: Run the tests (Windows)
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        "## Pytest Results`n`n" | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+        "``````" | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+        $output = pytest -v tests 2>&1
+        $output | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+        "``````" | Add-Content -Path $env:GITHUB_STEP_SUMMARY

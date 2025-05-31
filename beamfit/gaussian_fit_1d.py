@@ -21,7 +21,7 @@ class GaussianProfile1D(AnalysisMethod):
             image_sigmas = np.ones_like(image.data)
 
         def fitfun(x, mu, sigma, a, c):
-            return a * np.exp(-(x - mu) ** 2 / 2 / sigma ** 2) + c
+            return a * np.exp(-((x - mu) ** 2) / 2 / sigma**2) + c
 
         # Fit the projection on each axis
         fits = []
@@ -38,10 +38,12 @@ class GaussianProfile1D(AnalysisMethod):
             p0 = np.array([np.argmax(y_norm), np.sum(y_norm > np.exp(-1 / 8)), 1, 0.0])
 
             # Run the fit
-            hopt, c = opt.curve_fit(fitfun, np.arange(y_norm.size), y_norm, p0, sigma=y_sigma_norm)
+            hopt, c = opt.curve_fit(
+                fitfun, np.arange(y_norm.size), y_norm, p0, sigma=y_sigma_norm
+            )
 
             # Add in the optimal values
-            hopt[2] *= (hi - lo)
+            hopt[2] *= hi - lo
             hopt[3] = hopt[3] * (hi - lo) + lo
             fits.append(hopt)
 
@@ -60,31 +62,40 @@ class GaussianProfile1D(AnalysisMethod):
 
         # Calculate scaling values for x/y for amplitude. This is required since gaussian can clip on the edge of the
         # image meaning the integral involves the error function
-        sy, sx = [2/(special.erf((s-f[0])/f[1]/np.sqrt(2)) - special.erf(-f[0]/f[1]/np.sqrt(2)))/(f[1]*np.sqrt(2*np.pi))
-                  for s, f in zip(image.shape, reversed(fits))]
+        sy, sx = [
+            2
+            / (
+                special.erf((s - f[0]) / f[1] / np.sqrt(2))
+                - special.erf(-f[0] / f[1] / np.sqrt(2))
+            )
+            / (f[1] * np.sqrt(2 * np.pi))
+            for s, f in zip(image.shape, reversed(fits))
+        ]
 
         # Convert the parameters to h for the 2D Super-Gaussian
-        h = np.array([
-            all_params[0],
-            all_params[4],
-            all_params[1]**2,
-            0.0,
-            all_params[5]**2,
-            1.0,
-            (all_params[2]*sx + all_params[6]*sy)/2,
-            (all_params[3]/image.shape[1] + all_params[7]/image.shape[0])/2
-        ])
+        h = np.array(
+            [
+                all_params[0],
+                all_params[4],
+                all_params[1] ** 2,
+                0.0,
+                all_params[5] ** 2,
+                1.0,
+                (all_params[2] * sx + all_params[6] * sy) / 2,
+                (all_params[3] / image.shape[1] + all_params[7] / image.shape[0]) / 2,
+            ]
+        )
 
         # Get the Jacobian of the transformation
         j = np.zeros((8, 8))
         j[0, 0] = 1
         j[1, 4] = 1
-        j[2, 1] = 2*all_params[1]
-        j[4, 5] = 2*all_params[5]
-        j[6, 2] = sx/2
-        j[6, 6] = sy/2
-        j[7, 3] = 1/image.shape[1]/2
-        j[7, 7] = 1/image.shape[0]/2
+        j[2, 1] = 2 * all_params[1]
+        j[4, 5] = 2 * all_params[5]
+        j[6, 2] = sx / 2
+        j[6, 6] = sy / 2
+        j[7, 3] = 1 / image.shape[1] / 2
+        j[7, 7] = 1 / image.shape[0] / 2
 
         # Transform the uncertainties
         c_all = j @ all_uncertainties @ j.T
