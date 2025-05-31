@@ -2,19 +2,11 @@
 This library contains methods to fit for the size of a beam in a noisy 2D image
 
 ## Installation and Testing
-Compile and install the package with pip.
+Install through pip.
 
 ```bash
-pip install <path to unzipped beamfit directory>
+pip install beamfit
 ```
-
-The package can now be tested using python's unit testing framework.
-
-```bash
-python -m unittest beamfit.tests
-```
-
-A correct installation should report that all tests pass when this command is run.
 
 ## Fitting Quickstart
 
